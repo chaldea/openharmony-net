@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <PackageId>Chaldea.OpenHarmony.Sdk</PackageId>
+    <Authors>OpenHarmony.NET</Authors>
+    <Description>OpenHarmony .NET 10 workload SDK, NativeAOT application and HAP tooling.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <BuildOutputTargetFolder>tools</BuildOutputTargetFolder>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- These scripts are invoked by MSBuild, not NuGet install hooks. -->
+    <NoWarn>$(NoWarn);NU5128;NU5110;NU5111</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Build.Framework" HintPath="$(MSBuildBinPath)/Microsoft.Build.Framework.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(MSBuildBinPath)/Microsoft.Build.Utilities.Core.dll" Private="false" />
+    <Compile Include="../PublishAotCross/package/OpenHarmonySdkResolver/OpenHarmonySdkResolution.cs" Link="OpenHarmonySdkResolution.cs" />
+    <None Include="Sdk/**;targets/**;scripts/**;templates/**" Pack="true" PackagePath="%(Identity)" />
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <None Include="../PublishAotCross/package/Crosscompile.targets" Pack="true" PackagePath="targets/Crosscompile.targets" />
+  </ItemGroup>
+</Project>

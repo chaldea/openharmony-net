@@ -1,0 +1,21 @@
+{
+  "version": "@VERSION@",
+  "workloads": {
+    "harmonyos": {
+      "description": ".NET 10 NativeAOT applications for OpenHarmony / HarmonyOS",
+      "platforms": ["win-x64"],
+      "packs": [
+        "Chaldea.OpenHarmony.Sdk",
+        "Chaldea.OpenHarmony.Runtime.NativeAot.x86_64",
+        "Chaldea.OpenHarmony.Runtime.NativeAot.arm64-v8a",
+        "Chaldea.OpenHarmony.Templates"
+      ]
+    }
+  },
+  "packs": {
+    "Chaldea.OpenHarmony.Sdk": { "kind": "sdk", "version": "@VERSION@" },
+    "Chaldea.OpenHarmony.Runtime.NativeAot.x86_64": { "kind": "framework", "version": "@VERSION@" },
+    "Chaldea.OpenHarmony.Runtime.NativeAot.arm64-v8a": { "kind": "framework", "version": "@VERSION@" },
+    "Chaldea.OpenHarmony.Templates": { "kind": "template", "version": "@VERSION@" }
+  }
+}

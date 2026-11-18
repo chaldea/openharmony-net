@@ -1,0 +1,7 @@
+<Project>
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+    <SdkSupportedTargetPlatformIdentifier Include="ohos" DisplayName="OpenHarmony" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Chaldea.OpenHarmony.Sdk"
+          Condition="'$(TargetPlatformIdentifier)' == 'ohos' and $([MSBuild]::VersionEquals('$(TargetFrameworkVersion)', '10.0'))" />
+</Project>

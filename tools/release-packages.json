@@ -1,0 +1,16 @@
+{
+  "repository": "https://github.com/chaldea/openharmony-net",
+  "featureBand": "10.0.300",
+  "packages": [
+    "Chaldea.OpenHarmony.NDK.Bindings",
+    "Chaldea.OpenHarmony.PublishAotCross",
+    "Chaldea.OpenHarmony.HapTooling",
+    "Chaldea.OpenHarmony.Player.Sdk",
+    "Chaldea.OpenHarmony.Runtime.NativeAot.arm64-v8a",
+    "Chaldea.OpenHarmony.Runtime.NativeAot.x86_64",
+    "Chaldea.OpenHarmony.Sdk",
+    "Chaldea.OpenHarmony.Templates",
+    "Chaldea.OpenHarmony.Workload.Manifest-10.0.300",
+    "Chaldea.OpenHarmony.Workload"
+  ]
+}

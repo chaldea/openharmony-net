@@ -1,0 +1,115 @@
+name: Publish NuGet release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'NuGet version (for example 10.0.10-ohos.2-preview.1)'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: nuget-release
+  cancel-in-progress: false
+jobs:
+  build:
+    # NativeAOT + ICU/OpenSSL needs the documented VS/SDK/CLI environment and disk space.
+    runs-on: [self-hosted, Windows, X64, harmonyos]
+    timeout-minutes: 720
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          clean: true
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Resolve release version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME -replace '^v', '' } else { $env:INPUT_VERSION }
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$') { throw 'Invalid release version.' }
+          "value=$version" >> $env:GITHUB_OUTPUT
+      - name: Check NuGet package names
+        run: ./tools/check-nuget-names.ps1 -OutputPath ./artifacts/nuget-name-check.json
+      - name: Build and test managed code
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: ./build.ps1 -Target Test -Version $env:RELEASE_VERSION
+      - name: Prepare official Native SDK and dependencies
+        run: |
+          ./tools/install-native-sdk.ps1
+          ./tools/prepare-native-dependencies.ps1 -SdkRoot ./artifacts/native/sdk
+      - name: Build both NativeAOT runtimes from source
+        run: ./tools/build-runtime.ps1 -SdkRoot ./artifacts/native/sdk
+      - name: Pack complete release
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: ./build.ps1 -Target Pack -Version $env:RELEASE_VERSION
+      - name: Verify renamed NuGet dependencies
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: ./tools/verify-packages.ps1 -SdkRoot ./artifacts/native/sdk -Version $env:RELEASE_VERSION
+      - name: Install a disposable SDK for workload verification
+        run: |
+          Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile ./artifacts/dotnet-install.ps1
+          & ./artifacts/dotnet-install.ps1 -Version 10.0.301 -Architecture x64 -InstallDir ./artifacts/release-sdk -NoPath
+      - name: Verify tool, workload lifecycle and both HAP architectures
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          if (!$env:OHOS_COMMAND_LINE_TOOLS -or !$env:JAVA_HOME) { throw 'Configure OHOS_COMMAND_LINE_TOOLS and JAVA_HOME on the harmonyos runner.' }
+          ./tools/verify-workload.ps1 -DotnetRoot ./artifacts/release-sdk -Version $env:RELEASE_VERSION `
+            -CommandLineTools $env:OHOS_COMMAND_LINE_TOOLS -JavaHome $env:JAVA_HOME
+      - name: Validate release closure and stage only owned packages
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: ./tools/prepare-release.ps1 -Version $env:RELEASE_VERSION
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget-release
+          path: artifacts/release/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-validation
+          path: |
+            artifacts/test-results/*.trx
+            artifacts/wl-test/*/*.log
+            artifacts/wl-test/*/result.json
+            artifacts/nuget-name-check.json
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: nuget-release
+          path: packages
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify hashes and publish packs before bootstrap tool
+        shell: pwsh
+        env:
+          NUGET_SOURCE: ${{ secrets.NUGET_SOURCE }}
+          NUGET_KEY: ${{ secrets.NUGET_KEY }}
+        run: |
+          if (!$env:NUGET_SOURCE -or !$env:NUGET_KEY) { throw 'NUGET_SOURCE and NUGET_KEY secrets are required.' }
+          foreach ($line in Get-Content ./packages/SHA256SUMS) {
+            if ($line -notmatch '^([0-9a-f]{64})  ([A-Za-z0-9._-]+\.nupkg)$') { throw 'Invalid checksum record.' }
+            if ((Get-FileHash (Join-Path ./packages $Matches[2]) -Algorithm SHA256).Hash -ne $Matches[1]) { throw 'Package checksum mismatch.' }
+          }
+          $packages = Get-ChildItem ./packages/*.nupkg | Sort-Object @{Expression={ if ($_.Name -match '^Chaldea\.OpenHarmony\.Workload\.\d') { 2 } elseif ($_.Name -match '\.Manifest-') { 1 } else { 0 } }}, Name
+          foreach ($package in $packages) {
+            dotnet nuget push $package.FullName --source "$env:NUGET_SOURCE" --api-key "$env:NUGET_KEY" --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { throw "NuGet push failed: $($package.Name)" }
+          }

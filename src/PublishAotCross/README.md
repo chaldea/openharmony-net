@@ -1,4 +1,4 @@
-# OpenHarmony-NET.PublishAotCross
+# Chaldea.OpenHarmony.PublishAotCross
 
 > 本组件已整合到 OpenHarmony 主仓库。请使用根目录的 `build.ps1` 和 `OpenHarmony.slnx`。
 

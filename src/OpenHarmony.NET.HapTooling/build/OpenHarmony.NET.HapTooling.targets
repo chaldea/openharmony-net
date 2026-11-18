@@ -147,8 +147,8 @@
       <_NativeLibsDestDir>$(StageRoot)\entry\libs\$(OpenHarmonyAbi)</_NativeLibsDestDir>
       <!-- Player.Sdk sets OpenHarmonyRuntimePackPath for the active ABI. Fall back
            to the canonical NuGetPackageRoot layout if unset (matches Player.Sdk.targets). -->
-      <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyRuntimePackPath)' == '' and '$(OpenHarmonyAbi)' == 'arm64-v8a'">$(NuGetPackageRoot)openharmony.net.runtime.nativeaot.arm64-v8a\10.0.10-ohos.2-preview.1\runtime-pack</OpenHarmonyRuntimePackPath>
-      <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyRuntimePackPath)' == '' and '$(OpenHarmonyAbi)' == 'x86_64'">$(NuGetPackageRoot)openharmony.net.runtime.nativeaot.x86_64\10.0.10-ohos.2-preview.1\runtime-pack</OpenHarmonyRuntimePackPath>
+      <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyRuntimePackPath)' == '' and '$(OpenHarmonyAbi)' == 'arm64-v8a'">$(NuGetPackageRoot)chaldea.openharmony.runtime.nativeaot.arm64-v8a\10.0.10-ohos.2-preview.1\runtime-pack</OpenHarmonyRuntimePackPath>
+      <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyRuntimePackPath)' == '' and '$(OpenHarmonyAbi)' == 'x86_64'">$(NuGetPackageRoot)chaldea.openharmony.runtime.nativeaot.x86_64\10.0.10-ohos.2-preview.1\runtime-pack</OpenHarmonyRuntimePackPath>
       <OpenHarmonyRuntimePackNativeDir Condition="'$(OpenHarmonyRuntimePackPath)' != ''">$(OpenHarmonyRuntimePackPath)\native</OpenHarmonyRuntimePackNativeDir>
     </PropertyGroup>
     <ItemGroup>

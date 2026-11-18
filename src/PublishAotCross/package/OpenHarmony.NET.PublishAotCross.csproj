@@ -9,7 +9,7 @@
 			<TargetFramework>netstandard2.0</TargetFramework>
 			<IsPackable>true</IsPackable>
 
-			<PackageId>OpenHarmony.NET.PublishAotCross</PackageId>
+			<PackageId>Chaldea.OpenHarmony.PublishAotCross</PackageId>
 			<Version Condition="'$(Version)' == ''">42.42.42-dev</Version>
 			<Authors>OpenHarmony.NET, xljiulang, Michal Strehovsky</Authors>
 			<Company>OpenHarmony.NET, xljiulang, Michal Strehovsky</Company>
@@ -22,7 +22,7 @@
 		<ItemGroup>
 			<None Include="OpenHarmony.NET.PublishAotCross.targets">
 				<Pack>true</Pack>
-				<PackagePath>build</PackagePath>
+				<PackagePath>build/Chaldea.OpenHarmony.PublishAotCross.targets</PackagePath>
 			</None>
 			<None Include="Crosscompile.targets">
 				<Pack>true</Pack>

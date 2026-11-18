@@ -10,7 +10,7 @@
     <OpenHarmonyTarget>true</OpenHarmonyTarget>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="OpenHarmony.NET.Player.Sdk" Version="$(OpenHarmonyPackageVersion)" />
+    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="$(OpenHarmonyPackageVersion)" />
     <Compile Include="../../examples/NativeAotSmoke/Exports.cs" Link="Exports.cs" />
   </ItemGroup>
 </Project>

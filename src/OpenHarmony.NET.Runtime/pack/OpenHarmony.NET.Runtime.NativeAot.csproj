@@ -7,7 +7,7 @@
     <NoWarn>$(NoWarn);NU5100</NoWarn>
     <Version Condition="'$(Version)' == ''">10.0.10-ohos.2-preview.1</Version>
     <RuntimeAbi Condition="'$(RuntimeAbi)' == ''">x86_64</RuntimeAbi>
-    <PackageId>OpenHarmony.NET.Runtime.NativeAot.$(RuntimeAbi)</PackageId>
+    <PackageId>Chaldea.OpenHarmony.Runtime.NativeAot.$(RuntimeAbi)</PackageId>
     <Authors>OpenHarmony.NET</Authors>
     <Description>OpenHarmony .NET 10 NativeAOT API13 baseline runtime for $(RuntimeAbi).</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -22,6 +22,6 @@
   <ItemGroup>
     <None Include="$(RuntimePackRoot)\**" Pack="true" PackagePath="runtime-pack" />
     <None Include="$(GeneratedReleaseRoot)\manifest.json" Pack="true" PackagePath="/" />
-    <None Include="..\buildTransitive\OpenHarmony.NET.Runtime.NativeAot.$(RuntimeAbi).targets" Pack="true" PackagePath="buildTransitive" />
+    <None Include="..\buildTransitive\OpenHarmony.NET.Runtime.NativeAot.$(RuntimeAbi).targets" Pack="true" PackagePath="buildTransitive/$(PackageId).targets" />
   </ItemGroup>
 </Project>

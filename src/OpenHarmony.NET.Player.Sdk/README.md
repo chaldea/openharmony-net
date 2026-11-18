@@ -1,4 +1,4 @@
-# OpenHarmony.NET.Player.Sdk
+# Chaldea.OpenHarmony.Player.Sdk
 
 > 本组件已整合到 OpenHarmony 主仓库。请使用根目录的 `build.ps1` 和 `OpenHarmony.slnx`。
 
@@ -11,12 +11,12 @@ csproj is enough to produce `libxengine_player.so` via `dotnet publish`.
 When applied to a project with `OpenHarmonyTarget=true`, the package:
 
 1. **Pulls in the cross-compile toolchain** transitively, by depending on
-   `OpenHarmony.NET.PublishAotCross`. Its `build/*.targets` (Crosscompile.targets)
+   `Chaldea.OpenHarmony.PublishAotCross`. Its `build/*.targets` (Crosscompile.targets)
    drive the SDK resolver, clang/sysroot selection, and the NativeAOT link
    invocation for the OpenHarmony target triple.
 
 2. **Pulls in the runtime packs** for both ABIs
-   (`OpenHarmony.NET.Runtime.NativeAot.arm64-v8a` and `.x86_64`). Their
+   (`Chaldea.OpenHarmony.Runtime.NativeAot.arm64-v8a` and `.x86_64`). Their
    `buildTransitive` targets supply `IlcFrameworkNativePath`/`IlcSdkPath` and the
    native runtime libs (libc++_shared.so, libcrypto, ICU, etc.).
 
@@ -26,7 +26,7 @@ When applied to a project with `OpenHarmonyTarget=true`, the package:
 
 4. **Pins the active ABI.** Both runtime packs set
    `IlcFrameworkNativePath`/`IlcSdkPath` unconditionally (they are not gated on
-   `$(OpenHarmonyAbi)`). `OpenHarmony.NET.Player.Sdk.targets` runs after NuGet
+   `$(OpenHarmonyAbi)`). `Chaldea.OpenHarmony.Player.Sdk.targets` runs after NuGet
    imports them and forces those properties (plus the `NativeSharedLibrary`
    items) to match the build's `OpenHarmonyAbi`, so depending on both packs is
    safe.
@@ -46,9 +46,9 @@ When applied to a project with `OpenHarmonyTarget=true`, the package:
     <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)..\artifacts\packages</RestoreAdditionalProjectSources>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="OpenHarmony.NET.Player.Sdk" Version="10.0.10-ohos.2-preview.1" />
-    <PackageReference Include="OpenHarmony.NET.HapTooling" Version="10.0.10-ohos.2-preview.1" PrivateAssets="all" />
-    <PackageReference Include="OpenHarmony.NDK.Bindings" Version="10.0.10-ohos.2-preview.1" />
+    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="10.0.10-ohos.2-preview.1" />
+    <PackageReference Include="Chaldea.OpenHarmony.HapTooling" Version="10.0.10-ohos.2-preview.1" PrivateAssets="all" />
+    <PackageReference Include="Chaldea.OpenHarmony.NDK.Bindings" Version="10.0.10-ohos.2-preview.1" />
   </ItemGroup>
 </Project>
 ```

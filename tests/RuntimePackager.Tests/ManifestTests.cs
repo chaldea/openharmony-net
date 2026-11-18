@@ -47,7 +47,7 @@ public sealed class ManifestTests
         var recipe = File.ReadAllText(Path.Combine(RepositoryRoot, "pack", "OpenHarmony.NET.Runtime.NativeAot.csproj"));
         Assert.Contains("PackagePath=\"runtime-pack\"", recipe);
         Assert.Contains("manifest.json", recipe);
-        Assert.Contains("PackagePath=\"buildTransitive\"", recipe);
+        Assert.Contains("PackagePath=\"buildTransitive/$(PackageId).targets\"", recipe);
 
         foreach (var abi in new[] { "arm64-v8a", "x86_64" })
         {

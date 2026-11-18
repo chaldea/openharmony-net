@@ -25,6 +25,7 @@ try {
         )) {
             Invoke-Checked dotnet (@('pack',$project,'-c',$Configuration,'--no-build','--nologo') + $properties)
         }
+        & (Join-Path $PSScriptRoot 'tools/pack-workload.ps1') -Version $Version -Configuration $Configuration -NoBuild
     }
     if ($Target -eq 'Pack') {
         if (!$RuntimeArtifacts) { $RuntimeArtifacts = Join-Path $RepoRoot 'artifacts/native/runtime' }

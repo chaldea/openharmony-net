@@ -1,0 +1,96 @@
+<Project>
+  <UsingTask TaskName="OpenHarmony.NET.Sdk.ResolveSdk" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net10.0/OpenHarmony.NET.Sdk.dll" />
+  <UsingTask TaskName="OpenHarmony.NET.Sdk.WriteSettings" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net10.0/OpenHarmony.NET.Sdk.dll" />
+  <UsingTask TaskName="OpenHarmony.NET.Sdk.GenerateEntryPoint" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net10.0/OpenHarmony.NET.Sdk.dll" />
+  <UsingTask TaskName="OpenHarmony.NET.Sdk.WriteRunSettings" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net10.0/OpenHarmony.NET.Sdk.dll" />
+
+  <!-- Override the legacy resolver that builds a helper inside the package cache.
+       Workload installations are read-only during application builds. -->
+  <Target Name="ResolveOpenHarmonySdk" DependsOnTargets="ValidateOpenHarmonyWorkload">
+    <ResolveSdk SdkRoot="$(OpenHarmonySdkRoot)" CommandLineTools="$(OpenHarmonyCommandLineTools)" ApiLevel="$(OpenHarmonyApiLevel)">
+      <Output TaskParameter="NativeRoot" PropertyName="OpenHarmonyNativeRoot" />
+      <Output TaskParameter="ManifestPath" PropertyName="OpenHarmonySdkManifestPath" />
+      <Output TaskParameter="ManifestSha256" PropertyName="OpenHarmonySdkManifestSha256" />
+      <Output TaskParameter="Folder" PropertyName="OpenHarmonySdkFolder" />
+      <Output TaskParameter="ResolvedApiLevel" PropertyName="_OpenHarmonyResolvedApiLevel" />
+    </ResolveSdk>
+    <PropertyGroup>
+      <OpenHarmonySysroot>$(OpenHarmonyNativeRoot)/sysroot</OpenHarmonySysroot>
+      <OpenHarmonyClang>$(OpenHarmonyNativeRoot)/llvm/bin/clang.exe</OpenHarmonyClang>
+      <OpenHarmonyClangXX>$(OpenHarmonyNativeRoot)/llvm/bin/clang++.exe</OpenHarmonyClangXX>
+      <OpenHarmonyLinker>$(OpenHarmonyNativeRoot)/llvm/bin/ld.lld.exe</OpenHarmonyLinker>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="ValidateOpenHarmonyWorkload" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(OS)' != 'Windows_NT'" Text="The OpenHarmony NativeAOT workload currently supports Windows x64 hosts." />
+    <Error Condition="'$(OpenHarmonyAbi)' != 'x86_64' and '$(OpenHarmonyAbi)' != 'arm64-v8a'" Text="OpenHarmonyAbi must be x86_64 or arm64-v8a." />
+    <Error Condition="('$(OpenHarmonyAbi)' == 'x86_64' and '$(RuntimeIdentifier)' != 'linux-musl-x64') or ('$(OpenHarmonyAbi)' == 'arm64-v8a' and '$(RuntimeIdentifier)' != 'linux-musl-arm64')" Text="RuntimeIdentifier and OpenHarmonyAbi must describe the same architecture." />
+    <Error Condition="!Exists('$(IlcSdkPath)System.Private.CoreLib.dll') or !Exists('$(OpenHarmonyRuntimePackPath)/../manifest.json')" Text="OpenHarmony runtime pack is missing. Run dotnet workload repair with the local package source." />
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(AssemblyName)', '^[A-Za-z_][A-Za-z0-9_.-]*$'))" Text="OpenHarmony AssemblyName must contain only letters, numbers, underscores, dots and hyphens." />
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(OpenHarmonyBundleName)', '^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$'))" Text="OpenHarmonyBundleName must be a dotted application identifier." />
+  </Target>
+
+  <Target Name="PrepareOpenHarmonyApplication" BeforeTargets="CoreCompile" DependsOnTargets="ValidateOpenHarmonyResolvedSdk">
+    <PropertyGroup>
+      <_OpenHarmonyGeneratedEntry>$(IntermediateOutputPath)OpenHarmonyEntryPoint.g.cs</_OpenHarmonyGeneratedEntry>
+    </PropertyGroup>
+    <GenerateEntryPoint FilePath="$(_OpenHarmonyGeneratedEntry)" EntryPoint="$(OpenHarmonyEntryPoint)" />
+    <ItemGroup>
+      <Compile Include="$(_OpenHarmonyGeneratedEntry)" />
+      <FileWrites Include="$(_OpenHarmonyGeneratedEntry)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="WriteOpenHarmonySettings" DependsOnTargets="ValidateOpenHarmonyResolvedSdk">
+    <PropertyGroup>
+      <_OpenHarmonyWorkDirectory>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)harmonyos', '$(MSBuildProjectDirectory)'))</_OpenHarmonyWorkDirectory>
+      <_OpenHarmonySettingsPath>$(_OpenHarmonyWorkDirectory)/settings.json</_OpenHarmonySettingsPath>
+      <OpenHarmonyHapPath Condition="'$(OpenHarmonyHapPath)' == ''">$(PublishDir)$(AssemblyName)-unsigned.hap</OpenHarmonyHapPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <_OpenHarmonySetting Include="CommandLineTools" Value="$(OpenHarmonyCommandLineTools)" />
+      <_OpenHarmonySetting Include="JavaHome" Value="$(OpenHarmonyJavaHome)" />
+      <_OpenHarmonySetting Include="WorkDirectory" Value="$(_OpenHarmonyWorkDirectory)" />
+      <_OpenHarmonySetting Include="PublishDirectory" Value="$([System.IO.Path]::GetFullPath('$(PublishDir)', '$(MSBuildProjectDirectory)'))" />
+      <_OpenHarmonySetting Include="HapPath" Value="$([System.IO.Path]::GetFullPath('$(OpenHarmonyHapPath)', '$(MSBuildProjectDirectory)'))" />
+      <_OpenHarmonySetting Include="AssemblyName" Value="$(AssemblyName)" />
+      <_OpenHarmonySetting Include="BuildMode" Value="$(Configuration.ToLowerInvariant())" />
+      <_OpenHarmonySetting Include="Abi" Value="$(OpenHarmonyAbi)" />
+      <_OpenHarmonySetting Include="BundleName" Value="$(OpenHarmonyBundleName)" />
+      <_OpenHarmonySetting Include="Device" Value="$(OpenHarmonyDevice)" />
+      <_OpenHarmonySetting Include="DevelopmentSigning" Value="$(OpenHarmonyUseDevelopmentSigning)" />
+      <_OpenHarmonySetting Include="SignedHapPath" Value="$(OpenHarmonySignedHapPath)" />
+    </ItemGroup>
+    <WriteSettings FilePath="$(_OpenHarmonySettingsPath)" Settings="@(_OpenHarmonySetting)" />
+  </Target>
+
+  <Target Name="BuildOpenHarmonyHap" AfterTargets="Publish" DependsOnTargets="WriteOpenHarmonySettings">
+    <ItemGroup>
+      <_OpenHarmonyNativeLibrary Include="$(OpenHarmonyRuntimePackPath)/native/*.so;$(OpenHarmonyRuntimePackPath)/native/*.so.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_OpenHarmonyNativeLibrary)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <Exec Command="&quot;$(OpenHarmonyPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(OpenHarmonyWorkloadRoot)/scripts/hap.ps1&quot; -Action Package -SettingsPath &quot;$(_OpenHarmonySettingsPath)&quot;" />
+  </Target>
+
+  <!-- dotnet run uses ComputeRunArguments; hook it instead of launching the
+       linux-musl managed DLL on the Windows host. -->
+  <Target Name="PrepareOpenHarmonyRun" BeforeTargets="ComputeRunArguments">
+    <PropertyGroup>
+      <_OpenHarmonyRunSettings>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)harmonyos/run.json', '$(MSBuildProjectDirectory)'))</_OpenHarmonyRunSettings>
+      <_OpenHarmonyDotnetHost>$([System.IO.Path]::GetFullPath('$(MSBuildBinPath)/../../dotnet.exe'))</_OpenHarmonyDotnetHost>
+    </PropertyGroup>
+    <!-- The CLI evaluates ComputeRunArguments in-process. NativeAOT tasks must
+         run in a regular dotnet MSBuild process, with its task-host environment. -->
+    <WriteRunSettings FilePath="$(_OpenHarmonyRunSettings)" ProjectPath="$(MSBuildProjectFullPath)" DotnetPath="$(_OpenHarmonyDotnetHost)"
+                      Configuration="$(Configuration)" TargetFramework="$(TargetFramework)" />
+    <PropertyGroup>
+      <RunCommand>$(OpenHarmonyPowerShell)</RunCommand>
+      <RunArguments>-NoProfile -ExecutionPolicy Bypass -File &quot;$(OpenHarmonyWorkloadRoot)/scripts/run.ps1&quot; -SettingsPath &quot;$(_OpenHarmonyRunSettings)&quot;</RunArguments>
+      <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
+    </PropertyGroup>
+  </Target>
+  <Target Name="OpenHarmonyRun" DependsOnTargets="Publish">
+    <Exec Command="&quot;$(OpenHarmonyPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(OpenHarmonyWorkloadRoot)/scripts/hap.ps1&quot; -Action Run -SettingsPath &quot;$(_OpenHarmonySettingsPath)&quot;" />
+  </Target>
+</Project>

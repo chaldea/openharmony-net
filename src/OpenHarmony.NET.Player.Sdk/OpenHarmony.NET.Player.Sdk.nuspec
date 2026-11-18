@@ -1,20 +1,22 @@
 <?xml version="1.0"?>
 <package>
   <metadata>
-    <id>OpenHarmony.NET.Player.Sdk</id>
+    <id>Chaldea.OpenHarmony.Player.Sdk</id>
     <version>$version$</version>
     <authors>OpenHarmony.NET</authors>
     <description>MSBuild SDK for OpenHarmony NativeAOT shared libraries.</description>
     <license type="expression">MIT</license>
+    <repository type="git" url="https://github.com/chaldea/openharmony-net" />
     <readme>README.md</readme>
     <dependencies>
-      <dependency id="OpenHarmony.NET.PublishAotCross" version="[$version$]" />
-      <dependency id="OpenHarmony.NET.Runtime.NativeAot.arm64-v8a" version="[$version$]" />
-      <dependency id="OpenHarmony.NET.Runtime.NativeAot.x86_64" version="[$version$]" />
+      <dependency id="Chaldea.OpenHarmony.PublishAotCross" version="[$version$]" />
+      <dependency id="Chaldea.OpenHarmony.Runtime.NativeAot.arm64-v8a" version="[$version$]" />
+      <dependency id="Chaldea.OpenHarmony.Runtime.NativeAot.x86_64" version="[$version$]" />
     </dependencies>
   </metadata>
   <files>
-    <file src="build\*" target="build" />
+    <file src="build\OpenHarmony.NET.Player.Sdk.props" target="build\Chaldea.OpenHarmony.Player.Sdk.props" />
+    <file src="build\OpenHarmony.NET.Player.Sdk.targets" target="build\Chaldea.OpenHarmony.Player.Sdk.targets" />
     <file src="README.md" target="" />
   </files>
 </package>

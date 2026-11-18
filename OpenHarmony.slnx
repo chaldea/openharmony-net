@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/OpenHarmony.NET.Sdk/OpenHarmony.NET.Sdk.csproj" />
+    <Project Path="src/OpenHarmony.NET.Templates/OpenHarmony.NET.Templates.csproj" />
     <Project Path="src/OpenHarmony.NDK.Bindings/OpenHarmony.NDK.Bindings.csproj" />
     <Project Path="src/OpenHarmony.NET.HapTooling/OpenHarmony.NET.HapTooling.csproj" />
     <Project Path="src/OpenHarmony.NET.Player.Sdk/OpenHarmony.NET.Player.Sdk.csproj" />
@@ -8,11 +10,13 @@
     <Project Path="src/PublishAotCross/package/OpenHarmonySdkResolver/OpenHarmonySdkResolver.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/WorkloadInstaller/WorkloadInstaller.csproj" />
     <Project Path="tools/BindingGenerator/BindingGenerator.csproj" />
     <Project Path="tools/RuntimePackager/RuntimePackager.csproj" />
     <Project Path="tools/ClangShim/clang.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/OpenHarmony.Workload.Tests/OpenHarmony.Workload.Tests.csproj" />
     <Project Path="tests/AbiProbe.Managed/AbiProbe.Managed.csproj" />
     <Project Path="tests/BindingGenerator.Tests/BindingGenerator.Tests.csproj" />
     <Project Path="tests/OpenHarmony.NDK.Bindings.Tests/OpenHarmony.NDK.Bindings.Tests.csproj" />

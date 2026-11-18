@@ -5,7 +5,7 @@
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<IsPackable>true</IsPackable>
 
-		<PackageId>OpenHarmony.NET.HapTooling</PackageId>
+		<PackageId>Chaldea.OpenHarmony.HapTooling</PackageId>
 		<Version Condition="'$(Version)' == ''">10.0.10-ohos.2-preview.1</Version>
 		<Authors>OpenHarmony.NET</Authors>
 		<Company>OpenHarmony.NET</Company>
@@ -31,11 +31,11 @@
 	<ItemGroup>
 		<None Include="build\OpenHarmony.NET.HapTooling.props">
 			<Pack>true</Pack>
-			<PackagePath>build</PackagePath>
+			<PackagePath>build/Chaldea.OpenHarmony.HapTooling.props</PackagePath>
 		</None>
 		<None Include="build\OpenHarmony.NET.HapTooling.targets">
 			<Pack>true</Pack>
-			<PackagePath>build</PackagePath>
+			<PackagePath>build/Chaldea.OpenHarmony.HapTooling.targets</PackagePath>
 		</None>
 		<None Include="README.md" Condition="Exists('README.md')">
 			<Pack>true</Pack>

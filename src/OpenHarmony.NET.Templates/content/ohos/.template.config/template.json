@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "OpenHarmony.NET",
+  "classifications": ["OpenHarmony", "HarmonyOS", "NativeAOT"],
+  "identity": "OpenHarmony.NET.Application.CSharp",
+  "name": "OpenHarmony .NET application",
+  "shortName": "ohos",
+  "sourceName": "OhosApp",
+  "preferNameDirectory": true,
+  "tags": { "language": "C#", "type": "project" }
+}

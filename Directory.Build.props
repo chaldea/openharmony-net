@@ -4,6 +4,9 @@
     <OpenHarmonyPackageVersion Condition="'$(OpenHarmonyPackageVersion)' == ''">10.0.10-ohos.2-preview.1</OpenHarmonyPackageVersion>
     <Version Condition="'$(Version)' == ''">$(OpenHarmonyPackageVersion)</Version>
     <PackageOutputPath>$(RepositoryRoot)artifacts/packages</PackageOutputPath>
+    <WorkloadFeatureBand Condition="'$(WorkloadFeatureBand)' == ''">10.0.300</WorkloadFeatureBand>
+    <RepositoryUrl>https://github.com/chaldea/openharmony-net</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 </Project>

@@ -1,0 +1,5 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "dependencies": { "libdotnet.so": "file:./src/main/cpp/types/libdotnet" }
+}

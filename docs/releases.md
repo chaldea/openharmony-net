@@ -1,0 +1,101 @@
+# NuGet 发布流程
+
+本仓库使用 `Chaldea.OpenHarmony.*` 包名。源码目录、程序集名、C# 命名空间及
+`OpenHarmony*` MSBuild 属性保持原有命名；NuGet 自动导入的 props/targets 文件在打包时
+改为与新包名一致。完整十个包以 `tools/release-packages.json` 为准。
+
+## 名称检查
+
+2026-11-18 查询 nuget.org v3 flat-container API，已存在：
+
+| 原包名 | 当时最新版本 |
+| --- | --- |
+| `OpenHarmony.NET.PublishAotCross` | `0.0.0-alpha.7` |
+| `OpenHarmony.NET.Sdk` | `0.0.0-alpha.7` |
+
+为避免使用原仓库的发布身份，所有发布包统一使用新前缀。查询时十个新 ID 全部返回
+HTTP 404。这个结果表示当时未找到公开包，并不代表已保留名称或具备推送权限。
+
+`tools/check-nuget-names.ps1` 会在发布前重新查询。已存在的包必须在最新 nuspec 的
+repository URL 中指向本仓库，否则失败；网络或服务端错误也会失败。该检查用于发现
+意外同名包，仓库元数据不是所有权证明，最终推送仍由 NuGet API key 的权限决定。
+
+## Runner 和 secrets
+
+`.github/workflows/release.yml` 通过 `v*` tag 或 Actions 的手动版本输入触发。
+它先在带 `self-hosted, Windows, X64, harmonyos` 标签的专用 runner 构建和验收，再在
+GitHub 托管的 Ubuntu runner 推送。不要把这个自托管 runner 用于不可信 PR。
+
+构建 runner 按 [项目维护](maintainers.md) 安装 Visual Studio C++、Git、PowerShell 7.3+，
+保留足够空间构建两个运行时，并配置：
+
+- `OHOS_COMMAND_LINE_TOOLS`：官方 command-line-tools 根目录，包含 SDK / ohpm / Hvigor。
+- `JAVA_HOME`：JDK 17+ 根目录。
+- 网络：允许访问官方 Native SDK、固定版本 ICU/OpenSSL、NuGet 和 .NET SDK 下载源。
+
+仓库或组织 Actions secrets：
+
+| secret | 值 |
+| --- | --- |
+| `NUGET_SOURCE` | 官方源 `https://api.nuget.org/v3/index.json` |
+| `NUGET_KEY` | 能发布 `Chaldea.OpenHarmony.*` 的 NuGet API key |
+
+工具包、runtime 包、manifest 和 bootstrap tool 使用同一个 NuGet 版本；manifest 不再
+固定为 `10.0.10`。版本来自 tag 去掉 `v`，或手动输入，支持稳定版和预览版。
+SDK feature band 固定为当前验证的 `10.0.300`；发布其它 band 前需同步 catalog、
+`Directory.Build.props`、打包参数和工具的支持版本，并完成验证。
+
+## 发布顺序与验证
+
+工作流从所选 Git revision 构建，流程如下：
+
+1. 检查 NuGet 名称，构建解决方案，运行单元测试。
+2. 下载并验证官方 API13/API15 Native SDK，构建 ICU/OpenSSL 和 x64/arm64 NativeAOT。
+3. 打包十个制品，验证改名后的 Player.Sdk 依赖及原生导出。
+4. 安装一次性 .NET SDK，从本地源安装 dotnet tool，验证 init、workload 安装/卸载/恢复、
+   x64 和 arm64 HAP。CI 不要求模拟器；设备运行由维护者额外验收。
+5. `prepare-release.ps1` 检查全部包的 ID、版本、仓库、内部依赖、manifest、runtime provenance；
+   只把 catalog 中的十个包复制到空的 release 目录，生成 SHA256SUMS。
+6. 上传审阅制品与验证日志；publish job 验证 SHA-256，按 pack → manifest → bootstrap tool
+   顺序调用 `dotnet nuget push --source ... --api-key ... --skip-duplicate`。
+
+`--skip-duplicate` 允许部分成功后的重试，不会替换 NuGet 上已有同版本包。发布版本不可
+原地修改；代码变更应使用新版本。NuGet 索引更新可能有延迟，工作流结束后确认所有包
+可检索再向用户公布版本。手动触发也会真实发布，不是 dry run。
+
+本地只验证、不推送：
+
+```powershell
+./build.ps1 -Target Test
+./build.ps1 -Target Pack -Version 10.0.10-ohos.2-preview.1
+./tools/check-nuget-names.ps1 -OutputPath ./artifacts/nuget-name-check.json
+# 输出目录必须为空，防止混入旧制品。
+./tools/prepare-release.ps1 -Version 10.0.10-ohos.2-preview.1 -OutputDirectory ./artifacts/release-check
+```
+
+## 工具开发与旧版本迁移
+
+`tools/WorkloadInstaller` 是 `Chaldea.OpenHarmony.Workload` dotnet tool 的源码，命令名
+`harmonyos-workload`。工具内嵌共享 manifest 模板及 targets，通过程序集元数据记录版本和
+feature band；用户注册时无需再下载脚本或额外安装 PowerShell。应用打包仍使用 Windows
+内置 PowerShell 和官方 CLI。
+
+本地 pack 后，可使用独立 tool 目录测试，不影响用户全局工具：
+
+```powershell
+dotnet tool install Chaldea.OpenHarmony.Workload --tool-path ./artifacts/local-tools `
+  --add-source ./artifacts/packages --version 10.0.10-ohos.2-preview.1
+./artifacts/local-tools/harmonyos-workload init --dotnet-root ./artifacts/dotnet-sdk
+dotnet workload install harmonyos --source ./artifacts/packages --skip-manifest-update
+```
+
+上述 `dotnet` 必须来自同一个独立 SDK，应用验证脚本会显式设置正确 PATH。
+`tools/register-workload.ps1` 仅保留为维护者兼容入口，内部调用 C# 工具，不再包含另一套注册逻辑。
+
+若安装过早期的 `openharmony.net.workload` manifest，先用原 SDK 执行
+`dotnet workload uninstall harmonyos`，再移除该 SDK 的
+`sdk-manifests/10.0.300/openharmony.net.workload/10.0.10` 旧注册目录，然后运行新工具 init。
+新工具检测同名 workload 冲突时会停止，不会覆盖其它 manifest。
+
+升级当前工具体系时：卸载 workload → 旧工具 unregister → 更新工具 → init → 安装 workload。
+本次实现仅准备工作流和本地制品，没有触发 GitHub 发布或向 nuget.org 推送。

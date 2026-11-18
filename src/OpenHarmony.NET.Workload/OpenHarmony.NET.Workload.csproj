@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <WorkloadFeatureBand Condition="'$(WorkloadFeatureBand)' == ''">10.0.300</WorkloadFeatureBand>
+    <PackageId>Chaldea.OpenHarmony.Workload.Manifest-$(WorkloadFeatureBand)</PackageId>
+    <Authors>OpenHarmony.NET</Authors>
+    <Description>Workload manifest for the harmonyos .NET 10 workload.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../OpenHarmony.NET.Sdk/README.md" Pack="true" PackagePath="/" />
+    <None Include="$(GeneratedManifestPath)" Pack="true" PackagePath="data/WorkloadManifest.json" />
+    <None Include="WorkloadManifest.targets" Pack="true" PackagePath="data/WorkloadManifest.targets" />
+  </ItemGroup>
+  <Target Name="ValidateGeneratedManifest" BeforeTargets="Pack">
+    <Error Condition="'$(GeneratedManifestPath)' == '' or !Exists('$(GeneratedManifestPath)')" Text="Use tools/pack-workload.ps1 to generate the versioned workload manifest before packing." />
+  </Target>
+</Project>

@@ -1,4 +1,4 @@
-# OpenHarmony.NET.HapTooling
+# Chaldea.OpenHarmony.HapTooling
 
 > 本组件已整合到 OpenHarmony 主仓库。请使用根目录的 `build.ps1` 和 `OpenHarmony.slnx`。
 
@@ -16,8 +16,8 @@ XEngine-generated player csproj pulls in the `BuildHap` / `VerifyHap` /
 
 | Path | Purpose |
 | --- | --- |
-| `build/OpenHarmony.NET.HapTooling.props` | Property defaults (`OpenHarmonyAbi`, `HapBuildMode`, hvigorw discovery, Stage root resolution). |
-| `build/OpenHarmony.NET.HapTooling.targets` | `BuildHap` / `BuildApp` (hvigorw assembleHap/assembleApp) and `VerifyHap` / `VerifyApp` (receipt + llvm-readelf ELF gate). |
+| `build/Chaldea.OpenHarmony.HapTooling.props` | Property defaults (`OpenHarmonyAbi`, `HapBuildMode`, hvigorw discovery, Stage root resolution). |
+| `build/Chaldea.OpenHarmony.HapTooling.targets` | `BuildHap` / `BuildApp` (hvigorw assembleHap/assembleApp) and `VerifyHap` / `VerifyApp` (receipt + llvm-readelf ELF gate). |
 | `templates/stage-player/` | The generic Hvigor Stage project. Tokenized with `{{APPLICATION_ID}}` / `{{APPLICATION_LABEL}}` / `{{VERSION_CODE}}` / `{{API_LEVEL}}` / `{{ABI}}` / `{{PLAYER_LIBRARY}}` / `{{ASSEMBLY_NAME}}`. |
 | `templates/stage-player/xengine-packaging.json` | The packaging contract XEngine's `HarmonyOSPackagingContract.ReadAsync` validates. |
 | `schemas/sdk-catalog.json` | The OpenHarmony SDK catalog XEngine's `HarmonyOSToolchainResolver.ValidateCatalog` validates. |

@@ -44,9 +44,9 @@
       which NuGet always sets, using the same lowercase id + version layout NuGet
       restores to.
     -->
-    <OpenHarmonyPublishAotCrossPackageDir Condition="'$(OpenHarmonyPublishAotCrossPackageDir)' == ''">$(_OpenHarmonyNuGetRoot)openharmony.net.publishaotcross\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyPublishAotCrossPackageDir>
-    <OpenHarmonyRuntimeArm64PackageDir Condition="'$(OpenHarmonyRuntimeArm64PackageDir)' == ''">$(_OpenHarmonyNuGetRoot)openharmony.net.runtime.nativeaot.arm64-v8a\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyRuntimeArm64PackageDir>
-    <OpenHarmonyRuntimeX64PackageDir Condition="'$(OpenHarmonyRuntimeX64PackageDir)' == ''">$(_OpenHarmonyNuGetRoot)openharmony.net.runtime.nativeaot.x86_64\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyRuntimeX64PackageDir>
+    <OpenHarmonyPublishAotCrossPackageDir Condition="'$(OpenHarmonyPublishAotCrossPackageDir)' == ''">$(_OpenHarmonyNuGetRoot)chaldea.openharmony.publishaotcross\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyPublishAotCrossPackageDir>
+    <OpenHarmonyRuntimeArm64PackageDir Condition="'$(OpenHarmonyRuntimeArm64PackageDir)' == ''">$(_OpenHarmonyNuGetRoot)chaldea.openharmony.runtime.nativeaot.arm64-v8a\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyRuntimeArm64PackageDir>
+    <OpenHarmonyRuntimeX64PackageDir Condition="'$(OpenHarmonyRuntimeX64PackageDir)' == ''">$(_OpenHarmonyNuGetRoot)chaldea.openharmony.runtime.nativeaot.x86_64\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyRuntimeX64PackageDir>
 
     <!-- Runtime pack root for the ACTIVE ABI. -->
     <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyAbi)' == 'arm64-v8a'">$(OpenHarmonyRuntimeArm64PackageDir)runtime-pack</OpenHarmonyRuntimePackPath>
@@ -71,8 +71,8 @@
        The Condition guards restore-time and non-OpenHarmony eval so importing
        this package into a host build does not error on the missing OpenHarmony
        SDK. -->
-  <Import Project="$(OpenHarmonyPublishAotCrossPackageDir)build\OpenHarmony.NET.PublishAotCross.targets"
-          Condition="'$(OpenHarmonyTarget)' == 'true' and '$(OpenHarmonyPublishAotCrossImported)' != 'true' and '$(OpenHarmonyPublishAotCrossPackageDir)' != '' and Exists('$(OpenHarmonyPublishAotCrossPackageDir)build\OpenHarmony.NET.PublishAotCross.targets')" />
+  <Import Project="$(OpenHarmonyPublishAotCrossPackageDir)build\Chaldea.OpenHarmony.PublishAotCross.targets"
+          Condition="'$(OpenHarmonyTarget)' == 'true' and '$(OpenHarmonyPublishAotCrossImported)' != 'true' and '$(OpenHarmonyPublishAotCrossPackageDir)' != '' and Exists('$(OpenHarmonyPublishAotCrossPackageDir)build\Chaldea.OpenHarmony.PublishAotCross.targets')" />
 
   <!-- Reset NativeSharedLibrary to ONLY the active ABI's native runtime libs.
        Both ABI packs add their *.so files unconditionally; without this, the

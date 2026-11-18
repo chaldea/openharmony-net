@@ -49,7 +49,7 @@ dotnet run --project tools/RuntimePackager/RuntimePackager.csproj -- `
     <OpenHarmonyApiLevel>15</OpenHarmonyApiLevel>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="OpenHarmony.NET.Player.Sdk" Version="10.0.10-ohos.2-preview.1" />
+    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="10.0.10-ohos.2-preview.1" />
   </ItemGroup>
 </Project>
 ```
