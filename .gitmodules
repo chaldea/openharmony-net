@@ -6,7 +6,7 @@
 	url = https://github.com/dotnet/core.git
 [submodule "runtime"]
 	path = dotnet/runtime
-	url = https://github.com/FlameskyDexive/runtime.git
+	url = https://github.com/chaldea/openharmony-net-runtime.git
 [submodule "runtime-origin"]
 	path = dotnet/runtime-origin
 	url = https://github.com/dotnet/runtime.git
