@@ -10,13 +10,23 @@ param(
 Push-Location $RepoRoot
 try {
     New-Item -ItemType Directory -Force -Path artifacts/packages | Out-Null
-    $properties = @("-p:OpenHarmonyPackageVersion=$Version", "-p:Version=$Version")
+    $sourceCommit = (& git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot determine source revision.' }
+    # Explicitly refresh metadata even when pack reuses incremental build outputs.
+    $properties = @("-p:OpenHarmonyPackageVersion=$Version", "-p:Version=$Version", "-p:RepositoryCommit=$sourceCommit")
     Invoke-Checked dotnet (@('build','OpenHarmony.slnx','-c',$Configuration,'--nologo') + $properties)
     if ($Target -eq 'Test') {
         Invoke-Checked dotnet @('test','OpenHarmony.slnx','-c',$Configuration,'--no-build','--nologo',
             '--logger','trx','--results-directory','artifacts/test-results')
     }
     if ($Target -in @('PackTools','Pack')) {
+        # NuGet's timestamp check does not notice a changed Git revision.
+        $catalog = Get-Content -Raw (Join-Path $RepoRoot 'tools/release-packages.json') | ConvertFrom-Json
+        foreach ($id in $catalog.packages) {
+            if ($Target -eq 'PackTools' -and $id -like '*.Runtime.NativeAot.*') { continue }
+            $package = Join-Path $RepoRoot "artifacts/packages/$id.$Version.nupkg"
+            if (Test-Path -LiteralPath $package) { Remove-Item -LiteralPath $package }
+        }
         foreach ($project in @(
             'src/OpenHarmony.NDK.Bindings/OpenHarmony.NDK.Bindings.csproj',
             'src/PublishAotCross/package/OpenHarmony.NET.PublishAotCross.csproj',
@@ -32,11 +42,10 @@ try {
         if (!$SdkCatalog) { $SdkCatalog = Join-Path $RepoRoot 'dotnet/runtime/eng/openharmony/sdk-catalog.json' }
         $runtimeCommit = (& git -C dotnet/runtime rev-parse HEAD).Trim()
         if ($LASTEXITCODE -ne 0) { throw 'Cannot determine runtime revision.' }
-        $bindingsCommit = (& git rev-parse HEAD).Trim()
         Invoke-Checked dotnet @('run','--project','tools/RuntimePackager/RuntimePackager.csproj',
             '-c',$Configuration,'--no-build','--','--source-root',$RuntimeArtifacts,
             '--output-root','artifacts/runtime','--version',$Version,'--runtime-commit',$runtimeCommit,
-            '--bindings-commit',$bindingsCommit,'--api-levels','13,14,15,16,17,18,19,20,21,22,23,24,26',
+            '--bindings-commit',$sourceCommit,'--api-levels','13,14,15,16,17,18,19,20,21,22,23,24,26',
             '--architectures','arm64,x64','--configuration',$Configuration,'--sdk-catalog',$SdkCatalog)
         foreach ($abi in @('arm64-v8a','x86_64')) {
             Invoke-Checked dotnet (@('pack','src/OpenHarmony.NET.Runtime/pack/OpenHarmony.NET.Runtime.NativeAot.csproj',

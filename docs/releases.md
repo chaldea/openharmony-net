@@ -22,6 +22,12 @@ repository URL 中指向本仓库，否则失败；网络或服务端错误也�
 
 ## Runner 和 secrets
 
+没有专用 runner 时，可使用 `.github/workflows/publish-prepared.yml`：先在已配置的开发主机
+从 release tag 构建并完成本文验证，将十个 nupkg 和 SHA256SUMS 上传为该 GitHub Release
+的附件，然后手动运行 **Publish validated release assets**，输入 tag。它在 GitHub 托管
+Windows runner 上重新检查哈希、包集合、内部依赖和与 tag 一致的源码 revision，再使用
+同一组 NuGet secrets 发布；不会重新执行原生编译或替代本地 HAP 验收。
+
 `.github/workflows/release.yml` 通过 `v*` tag 或 Actions 的手动版本输入触发。
 它先在带 `self-hosted, Windows, X64, harmonyos` 标签的专用 runner 构建和验收，再在
 GitHub 托管的 Ubuntu runner 推送。不要把这个自托管 runner 用于不可信 PR。
@@ -60,8 +66,9 @@ SDK feature band 固定为当前验证的 `10.0.300`；发布其它 band 前需�
    顺序调用 `dotnet nuget push --source ... --api-key ... --skip-duplicate`。
 
 `--skip-duplicate` 允许部分成功后的重试，不会替换 NuGet 上已有同版本包。发布版本不可
-原地修改；代码变更应使用新版本。NuGet 索引更新可能有延迟，工作流结束后确认所有包
-可检索再向用户公布版本。手动触发也会真实发布，不是 dry run。
+原地修改；代码变更应使用新版本。NuGet 索引更新可能有延迟，工作流结束后应分别记录
+推送结果和包的下载状态；包可下载后，再从 nuget.org 验证完整 workload 流程。
+手动触发也会真实发布，不是 dry run。
 
 本地只验证、不推送：
 
@@ -98,4 +105,3 @@ dotnet workload install harmonyos --source ./artifacts/packages --skip-manifest-
 新工具检测同名 workload 冲突时会停止，不会覆盖其它 manifest。
 
 升级当前工具体系时：卸载 workload → 旧工具 unregister → 更新工具 → init → 安装 workload。
-本次实现仅准备工作流和本地制品，没有触发 GitHub 发布或向 nuget.org 推送。

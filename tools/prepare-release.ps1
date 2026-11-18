@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][ValidatePattern('^\d+\.\d+\.\d+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$')][string]$Version,
+    [ValidatePattern('^[0-9a-f]{40}$')][string]$SourceCommit,
+    [ValidatePattern('^[0-9a-f]{40}$')][string]$RuntimeCommit,
     [string]$PackageDirectory = (Join-Path $PSScriptRoot '../artifacts/packages'),
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '../artifacts/release')
 )
@@ -29,6 +31,9 @@ foreach ($id in $catalog.packages) {
         $metadata = $nuspec.SelectSingleNode('//*[local-name()="metadata"]')
         if ($metadata.id -ne $id -or $metadata.version -ne $Version) { throw "Package identity mismatch in $path" }
         if ($metadata.repository.url -ne $catalog.repository) { throw "Repository metadata mismatch in $path" }
+        if ($SourceCommit -and $metadata.repository.commit -and $metadata.repository.commit -ne $SourceCommit) {
+            throw "Package source commit mismatch in $path"
+        }
         foreach ($dependency in $metadata.SelectNodes('.//*[local-name()="dependency"]')) {
             if ($dependency.id -like 'OpenHarmony.*') { throw "Old upstream dependency remains: $($dependency.id)" }
             if ($dependency.id -like 'Chaldea.OpenHarmony.*' -and
@@ -48,6 +53,8 @@ foreach ($id in $catalog.packages) {
             $manifest = (Read-ZipText $zip 'manifest.json') | ConvertFrom-Json
             if ($manifest.version -ne $Version -or $manifest.schemaVersion -ne 2 -or
                 @($manifest.compatibilityEntries | Where-Object sourceDirty).Count) { throw "Invalid runtime provenance in $id" }
+            if ($SourceCommit -and $manifest.bindingsCommit -ne $SourceCommit) { throw "Runtime package release commit mismatch in $id" }
+            if ($RuntimeCommit -and $manifest.runtimeCommit -ne $RuntimeCommit) { throw "Runtime source revision mismatch in $id" }
             foreach ($file in @('runtime-pack/sdk/System.Private.CoreLib.dll',"buildTransitive/$id.targets")) {
                 if (!$zip.GetEntry($file)) { throw "$id lacks $file" }
             }

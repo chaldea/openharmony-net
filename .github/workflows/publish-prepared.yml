@@ -1,0 +1,76 @@
+name: Publish validated release assets
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag containing tested nupkg assets and SHA256SUMS'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: nuget-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Resolve release source and download candidate packages
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v(\d+\.\d+\.\d+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?)$') { throw 'Invalid release tag.' }
+          "version=$($Matches[1])" >> $env:GITHUB_OUTPUT
+          git fetch --no-tags origin "refs/tags/$env:RELEASE_TAG`:refs/tags/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve release tag.' }
+          $commit = git rev-parse "$env:RELEASE_TAG^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve release commit.' }
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+          $runtime = (git ls-tree $commit dotnet/runtime) -split '\s+'
+          if ($LASTEXITCODE -ne 0 -or $runtime[2] -notmatch '^[0-9a-f]{40}$') { throw 'Cannot resolve runtime source revision.' }
+          "runtime=$($runtime[2])" >> $env:GITHUB_OUTPUT
+          gh release download $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --pattern '*.nupkg' --pattern SHA256SUMS --dir downloaded
+          if ($LASTEXITCODE -ne 0) { throw 'Release assets are missing.' }
+      - name: Verify every downloaded package checksum
+        run: |
+          $seen = @{}
+          foreach ($line in Get-Content ./downloaded/SHA256SUMS) {
+            if ($line -notmatch '^([0-9a-f]{64})  ([A-Za-z0-9._-]+\.nupkg)$') { throw 'Invalid checksum record.' }
+            $hash = $Matches[1]
+            $name = $Matches[2]
+            if ($seen.ContainsKey($name)) { throw 'Duplicate checksum record.' }
+            if ((Get-FileHash (Join-Path ./downloaded $name) -Algorithm SHA256).Hash -ne $hash) { throw "Checksum mismatch: $name" }
+            $seen[$name] = $true
+          }
+          foreach ($package in Get-ChildItem ./downloaded/*.nupkg) {
+            if (!$seen.ContainsKey($package.Name)) { throw "Missing checksum: $($package.Name)" }
+          }
+      - name: Validate package identities, dependencies and release source revisions
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          SOURCE_COMMIT: ${{ steps.release.outputs.commit }}
+          RUNTIME_COMMIT: ${{ steps.release.outputs.runtime }}
+        run: |
+          ./tools/prepare-release.ps1 -Version $env:RELEASE_VERSION -SourceCommit $env:SOURCE_COMMIT `
+            -RuntimeCommit $env:RUNTIME_COMMIT -PackageDirectory ./downloaded -OutputDirectory ./validated
+          ./tools/check-nuget-names.ps1
+      - name: Publish packs, manifest and bootstrap tool to NuGet
+        env:
+          NUGET_SOURCE: ${{ secrets.NUGET_SOURCE }}
+          NUGET_KEY: ${{ secrets.NUGET_KEY }}
+        run: |
+          if (!$env:NUGET_SOURCE -or !$env:NUGET_KEY) { throw 'NUGET_SOURCE and NUGET_KEY secrets are required.' }
+          $packages = Get-ChildItem ./validated/*.nupkg | Sort-Object @{Expression={ if ($_.Name -match '^Chaldea\.OpenHarmony\.Workload\.\d') { 2 } elseif ($_.Name -match '\.Manifest-') { 1 } else { 0 } }}, Name
+          foreach ($package in $packages) {
+            dotnet nuget push $package.FullName --source "$env:NUGET_SOURCE" --api-key "$env:NUGET_KEY" --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { throw "NuGet push failed: $($package.Name)" }
+          }
