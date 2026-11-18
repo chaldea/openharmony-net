@@ -1,0 +1,13 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "XEngine HarmonyOS entry module. Native host (libxengine_host.so) is built from entry/src/main/cpp/xengine/ and exports the xengine_host NAPI module.",
+  "main": "",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    // ArkTS imports the xengine_host NAPI module via 'libxengine_host.so'; the
+    // type declarations live under src/main/cpp/types/libxengine_host.
+    "libxengine_host.so": "file:./src/main/cpp/types/libxengine_host"
+  }
+}

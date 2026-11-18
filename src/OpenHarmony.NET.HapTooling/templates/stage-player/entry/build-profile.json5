@@ -1,0 +1,41 @@
+{
+  "apiType": "stageMode",
+  "buildOption": {
+    "externalNativeOptions": {
+      // XEngine copies the native host (CMakeLists.txt, xengine_host_napi.cpp,
+      // xengine_player_abi.h) into entry/src/main/cpp/xengine/ (see
+      // HarmonyOSPlayerProjectGenerator.NativeHostStageRelativePath), so the
+      // CMake entry point lives there. abiFilters is restricted to the single
+      // active ABI via {{ABI}}: each XEngine build produces a single-ABI
+      // libxengine_player.so, so the native host must be built for that ABI only
+      // (a dual-ABI filter would try to link the arm64 .so into the x86_64 build).
+      "path": "./src/main/cpp/xengine/CMakeLists.txt",
+      "arguments": "",
+      "cppFlags": "",
+      "abiFilters": ["{{ABI}}"]
+    }
+  },
+  "buildOptionSet": [
+    {
+      "name": "release",
+      "arkOptions": {
+        "obfuscation": {
+          "ruleOptions": {
+            "enable": false,
+            "files": ["./obfuscation-rules.txt"]
+          }
+        }
+      },
+      "nativeLib": {
+        "debugSymbol": {
+          "strip": true,
+          "exclude": []
+        }
+      }
+    }
+  ],
+  "targets": [
+    { "name": "default" },
+    { "name": "ohosTest" }
+  ]
+}

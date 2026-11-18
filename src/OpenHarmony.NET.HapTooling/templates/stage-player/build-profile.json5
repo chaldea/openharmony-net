@@ -1,0 +1,70 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        // Debug auto-signing. Material is supplied by DevEco at build time from
+        // %USERPROFILE%\.ohos\config (the "Automatically generate signature"
+        // material DevEco creates when a project is opened). We intentionally do
+        // NOT hardcode material paths here: they are machine-specific secrets,
+        // they are not part of the XEngine-supported token set, and the bundle
+        // name they encode is only known after {{APPLICATION_ID}} substitution.
+        // A provider that needs a fixed signing identity edits this file in the
+        // materialized Stage before invoking BuildHap, exactly like the Blazor
+        // sample's OHOS_Project/build-profile.json5 does.
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "",
+          "keyAlias": "debugKey",
+          "keyPassword": "",
+          "profile": "",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "",
+          "storePassword": ""
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        // compatibleSdkVersion uses the OpenHarmony "version(apiLevel)" form.
+        // The default API for this catalog is 15 (5.0.3); XEngine does not pass
+        // the per-API version string (only the integer {{API_LEVEL}} token, used
+        // elsewhere), so we ship a valid default that hvigor accepts. A provider
+        // building against a different API rewrites this field the same way
+        // build-hap-matrix.ps1 does for the Blazor sample.
+        "compatibleSdkVersion": "5.0.3(15)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        },
+        "targetSdkVersion": ""
+      }
+    ],
+    "buildModeSet": [
+      { "name": "debug" },
+      { "name": "release" }
+    ]
+    // NOTE: HarmonyOS app versioning (versionCode/versionName) lives in
+    // AppScope/app.json5, NOT here. The build-profile `app` object only accepts
+    // signingConfigs/products/buildModeSet/multiProjects/capabilities; hvigor
+    // rejects versionCode at this level. The required {{VERSION_CODE}} token is
+    // satisfied by AppScope/app.json5 (and by entry's string resources).
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": ["default"]
+        }
+      ]
+    }
+  ]
+}

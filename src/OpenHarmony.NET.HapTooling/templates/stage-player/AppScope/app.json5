@@ -1,0 +1,14 @@
+{
+  "app": {
+    "bundleName": "{{APPLICATION_ID}}",
+    "vendor": "XEngine",
+    "versionCode": {{VERSION_CODE}},
+    "versionName": "1.0.0",
+    "icon": "$media:app_icon",
+    // AppScope app.label must be a $string: resource reference (a literal label
+    // with spaces fails hvigor's app.json5 schema). The localized label text is
+    // supplied through AppScope/resources/base/element/string.json:app_name,
+    // which carries the {{APPLICATION_LABEL}} token.
+    "label": "$string:app_name"
+  }
+}

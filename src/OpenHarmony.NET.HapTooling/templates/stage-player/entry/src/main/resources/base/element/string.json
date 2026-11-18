@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "XEngine entry module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "XEngine"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "{{APPLICATION_LABEL}}"
+    }
+  ]
+}

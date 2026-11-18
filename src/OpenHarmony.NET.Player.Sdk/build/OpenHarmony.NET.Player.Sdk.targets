@@ -1,0 +1,93 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+    OpenHarmony.NET.Player.Sdk targets
+
+    Imported automatically by NuGet for the consuming project, AFTER NuGet
+    imports the dependencies' build/buildTransitive targets (transitive
+    dependencies are imported before the dependent package).
+
+    WIRING NOTE: why PublishAotCross is re-imported here.
+
+    dotnet pack marks every PackageReference dependency of a build-target
+    (NoTargets) package with exclude="Build" in the generated nuspec. That
+    prevents NuGet from applying PublishAotCross's build/*.targets
+    (Crosscompile.targets, the clang/sysroot/NativeAOT logic) to the consumer
+    transitively; only buildTransitive/ flows (which is why the runtime packs
+    work, they ship buildTransitive/). The practical symptom is "Cross-OS
+    native compilation is not supported" because the ILCompiler never sees the
+    OpenHarmony toolchain.
+
+    Microsoft's own workload/meta build packs solve this the same way we do
+    here: the meta-package's own targets file re-imports the dependency's
+    targets from the NuGet-resolved package directory. This is NOT the
+    forbidden hardcoded source-tree path (../../ThirdParty/...) anti-pattern
+    the old Entry.csproj used; it is the SDK-sanctioned, restore-driven path
+    and tracks whatever version NuGet restored.
+  -->
+
+  <PropertyGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+    <_OpenHarmonyNuGetRoot>$([MSBuild]::EnsureTrailingSlash('$(NuGetPackageRoot)'))</_OpenHarmonyNuGetRoot>
+    <_OpenHarmonyPlayerPackageRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</_OpenHarmonyPlayerPackageRoot>
+    <OpenHarmonyPlayerPackageVersion Condition="'$(OpenHarmonyPlayerPackageVersion)' == ''">$([System.IO.Path]::GetFileName('$(_OpenHarmonyPlayerPackageRoot)'))</OpenHarmonyPlayerPackageVersion>
+
+    <!-- Deterministic ABI derivation (same logic as Crosscompile.targets, but
+         guaranteed to run here even if RID arrived late). -->
+    <OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == '' and $(RuntimeIdentifier.EndsWith('-arm64'))">arm64-v8a</OpenHarmonyAbi>
+    <OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == '' and $(RuntimeIdentifier.EndsWith('-x64'))">x86_64</OpenHarmonyAbi>
+
+    <!--
+      Resolved package directories. NuGet only generates a $(Pkg...) property
+      for packages the consuming project references DIRECTLY (here, that is
+      Player.Sdk itself and NDK.Bindings), not for transitive deps. We therefore
+      derive the transitive packages' directories from $(NuGetPackageRoot),
+      which NuGet always sets, using the same lowercase id + version layout NuGet
+      restores to.
+    -->
+    <OpenHarmonyPublishAotCrossPackageDir Condition="'$(OpenHarmonyPublishAotCrossPackageDir)' == ''">$(_OpenHarmonyNuGetRoot)openharmony.net.publishaotcross\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyPublishAotCrossPackageDir>
+    <OpenHarmonyRuntimeArm64PackageDir Condition="'$(OpenHarmonyRuntimeArm64PackageDir)' == ''">$(_OpenHarmonyNuGetRoot)openharmony.net.runtime.nativeaot.arm64-v8a\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyRuntimeArm64PackageDir>
+    <OpenHarmonyRuntimeX64PackageDir Condition="'$(OpenHarmonyRuntimeX64PackageDir)' == ''">$(_OpenHarmonyNuGetRoot)openharmony.net.runtime.nativeaot.x86_64\$(OpenHarmonyPlayerPackageVersion)\</OpenHarmonyRuntimeX64PackageDir>
+
+    <!-- Runtime pack root for the ACTIVE ABI. -->
+    <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyAbi)' == 'arm64-v8a'">$(OpenHarmonyRuntimeArm64PackageDir)runtime-pack</OpenHarmonyRuntimePackPath>
+    <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyAbi)' == 'x86_64'">$(OpenHarmonyRuntimeX64PackageDir)runtime-pack</OpenHarmonyRuntimePackPath>
+    <OpenHarmonyRuntimeManifestPath Condition="'$(OpenHarmonyRuntimePackPath)' != ''">$(OpenHarmonyRuntimePackPath)\..\manifest.json</OpenHarmonyRuntimeManifestPath>
+
+    <!-- Pin the NativeAOT framework/sdk paths to the active ABI's pack. Both
+         ABI runtime packs set these unconditionally (they are NOT gated on
+         $(OpenHarmonyAbi)), so last-imported-wins; we force the active ABI. -->
+    <IlcFrameworkNativePath Condition="'$(OpenHarmonyRuntimePackPath)' != ''">$(OpenHarmonyRuntimePackPath)\native\</IlcFrameworkNativePath>
+    <IlcSdkPath Condition="'$(OpenHarmonyRuntimePackPath)' != ''">$(OpenHarmonyRuntimePackPath)\sdk\</IlcSdkPath>
+
+    <!-- Make the active ABI visible to anyone reading
+         OpenHarmonyRuntimePackageAbi. -->
+    <OpenHarmonyRuntimePackageAbi>$(OpenHarmonyAbi)</OpenHarmonyRuntimePackageAbi>
+
+  </PropertyGroup>
+
+  <!-- Re-import PublishAotCross's targets from the NuGet-resolved package
+       directory. Crosscompile.targets (imported by PublishAotCross.targets) is
+       the clang/sysroot/NativeAOT toolchain logic; see the WIRING NOTE above.
+       The Condition guards restore-time and non-OpenHarmony eval so importing
+       this package into a host build does not error on the missing OpenHarmony
+       SDK. -->
+  <Import Project="$(OpenHarmonyPublishAotCrossPackageDir)build\OpenHarmony.NET.PublishAotCross.targets"
+          Condition="'$(OpenHarmonyTarget)' == 'true' and '$(OpenHarmonyPublishAotCrossImported)' != 'true' and '$(OpenHarmonyPublishAotCrossPackageDir)' != '' and Exists('$(OpenHarmonyPublishAotCrossPackageDir)build\OpenHarmony.NET.PublishAotCross.targets')" />
+
+  <!-- Reset NativeSharedLibrary to ONLY the active ABI's native runtime libs.
+       Both ABI packs add their *.so files unconditionally; without this, the
+       publish dir would get native libs from both ABIs (and the wrong ABI's
+       libc++_shared.so would clobber the right one depending on import order).
+       Runs as a target so it executes after both buildTransitive ItemGroups
+       have been evaluated. -->
+  <Target Name="SelectActiveAbiRuntimeNativeLibraries"
+          BeforeTargets="PrepareForBuild;CopyOpenHarmonyRuntimeNativeLibrariesArm64;CopyOpenHarmonyRuntimeNativeLibrariesX64;Publish"
+          Condition="'$(OpenHarmonyTarget)' == 'true' and '$(OpenHarmonyRuntimePackPath)' != ''">
+    <ItemGroup>
+      <NativeSharedLibrary Remove="$(OpenHarmonyRuntimeArm64PackageDir)runtime-pack\native\*" Condition="'$(OpenHarmonyRuntimeArm64PackageDir)' != '' and '$(OpenHarmonyAbi)' != 'arm64-v8a'" />
+      <NativeSharedLibrary Remove="$(OpenHarmonyRuntimeX64PackageDir)runtime-pack\native\*" Condition="'$(OpenHarmonyRuntimeX64PackageDir)' != '' and '$(OpenHarmonyAbi)' != 'x86_64'" />
+    </ItemGroup>
+    <Message Text="OpenHarmony.NET.Player.Sdk: active ABI $(OpenHarmonyAbi), runtime pack $(OpenHarmonyRuntimePackPath)" Importance="High" />
+  </Target>
+
+</Project>

@@ -1,0 +1,27 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpenHarmony.NDK.Bindings/OpenHarmony.NDK.Bindings.csproj" />
+    <Project Path="src/OpenHarmony.NET.HapTooling/OpenHarmony.NET.HapTooling.csproj" />
+    <Project Path="src/OpenHarmony.NET.Player.Sdk/OpenHarmony.NET.Player.Sdk.csproj" />
+    <Project Path="src/OpenHarmony.NET.Runtime/pack/OpenHarmony.NET.Runtime.NativeAot.csproj" />
+    <Project Path="src/PublishAotCross/package/OpenHarmony.NET.PublishAotCross.csproj" />
+    <Project Path="src/PublishAotCross/package/OpenHarmonySdkResolver/OpenHarmonySdkResolver.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/BindingGenerator/BindingGenerator.csproj" />
+    <Project Path="tools/RuntimePackager/RuntimePackager.csproj" />
+    <Project Path="tools/ClangShim/clang.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AbiProbe.Managed/AbiProbe.Managed.csproj" />
+    <Project Path="tests/BindingGenerator.Tests/BindingGenerator.Tests.csproj" />
+    <Project Path="tests/OpenHarmony.NDK.Bindings.Tests/OpenHarmony.NDK.Bindings.Tests.csproj" />
+    <Project Path="tests/PublishAotCross.Tests/PublishAotCross.Tests.csproj" />
+    <Project Path="tests/RuntimePackager.Tests/RuntimePackager.Tests.csproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/NativeAotSmoke/NativeAotSmoke.csproj" />
+    <Project Path="examples/CrossCompileHello/Hello.csproj" />
+    <Project Path="examples/OpenHarmony.Demo/OpenHarmony.Demo.csproj" />
+  </Folder>
+</Solution>

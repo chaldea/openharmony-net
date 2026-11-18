@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "hap": {
+    "buildTarget": "BuildHap",
+    "verifyTarget": "VerifyHap",
+    "artifact": "entry/build/default/outputs/default/entry-default-signed.hap"
+  },
+  "app": {
+    "buildTarget": "BuildApp",
+    "verifyTarget": "VerifyApp",
+    "artifact": "entry/build/default/outputs/default/entry-default-signed.app"
+  },
+  "allowedElfDependencies": [
+    "libace_napi.z.so",
+    "libace_ndk.z.so",
+    "libc.so",
+    "libc++_shared.so",
+    "libhilog_ndk.z.so",
+    "libnative_window.so",
+    "libSystem.Net.Security.Native.so",
+    "libcrypto.so.3",
+    "libssl.so.3",
+    "libvulkan.so",
+    "libxengine_player.so"
+  ]
+}

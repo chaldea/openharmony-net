@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    "AppScope/app.json5",
+    "AppScope/resources/base/element/string.json",
+    "AppScope/resources/base/media/app_icon.png",
+    "AppScope/resources/base/media/background.png",
+    "AppScope/resources/base/media/foreground.png",
+    "AppScope/resources/base/media/layered_image.json",
+    "build-profile.json5",
+    "entry/build-profile.json5",
+    "entry/hvigorfile.ts",
+    "entry/oh-package.json5",
+    "entry/src/main/cpp/types/libxengine_host/index.d.ts",
+    "entry/src/main/cpp/types/libxengine_host/oh-package.json5",
+    "entry/src/main/ets/entryability/EntryAbility.ets",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/module.json5",
+    "entry/src/main/resources/base/element/color.json",
+    "entry/src/main/resources/base/element/string.json",
+    "entry/src/main/resources/base/media/background.png",
+    "entry/src/main/resources/base/media/foreground.png",
+    "entry/src/main/resources/base/media/layered_image.json",
+    "entry/src/main/resources/base/media/startIcon.png",
+    "entry/src/main/resources/base/profile/main_pages.json",
+    "hvigor/hvigor-config.json5",
+    "hvigorfile.ts",
+    "oh-package.json5",
+    "xengine-packaging.json"
+  ]
+}

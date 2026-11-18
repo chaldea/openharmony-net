@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.Build.NoTargets">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- Package dependencies are consumed after packing; source builds do not
+         require prebuilt runtime packages. -->
+    <NuspecFile>OpenHarmony.NET.Player.Sdk.nuspec</NuspecFile>
+    <NuspecProperties>version=$(Version)</NuspecProperties>
+    <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
+  </PropertyGroup>
+</Project>

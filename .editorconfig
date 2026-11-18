@@ -1,0 +1,4 @@
+# Runtime outputs live outside the third-party checkout after consolidation.
+# Its generated files must retain the same analyzer treatment as artifacts/ there.
+[artifacts/native/runtime/**]
+generated_code = true

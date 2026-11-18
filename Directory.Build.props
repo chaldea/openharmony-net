@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <RepositoryRoot>$(MSBuildThisFileDirectory)</RepositoryRoot>
+    <OpenHarmonyPackageVersion Condition="'$(OpenHarmonyPackageVersion)' == ''">10.0.10-ohos.2-preview.1</OpenHarmonyPackageVersion>
+    <Version Condition="'$(Version)' == ''">$(OpenHarmonyPackageVersion)</Version>
+    <PackageOutputPath>$(RepositoryRoot)artifacts/packages</PackageOutputPath>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

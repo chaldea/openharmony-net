@@ -1,0 +1,9 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <OpenHarmonyPublishAotCrossImported>true</OpenHarmonyPublishAotCrossImported>
+  </PropertyGroup>
+
+  <Import Project="Crosscompile.targets" Condition="'$(OpenHarmonyTarget)' == 'true' or $(RuntimeIdentifier.Contains('linux'))" />
+
+</Project>

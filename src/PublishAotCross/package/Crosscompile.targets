@@ -1,0 +1,215 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<PropertyGroup>
+		<DisableUnsupportedError>true</DisableUnsupportedError>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<OpenHarmonyApiLevel Condition="'$(OpenHarmonyApiLevel)' == ''">15</OpenHarmonyApiLevel>
+		<OpenHarmonySdkRoot Condition="'$(OpenHarmonySdkRoot)' == ''">$(OHOS_SDK_ROOT)</OpenHarmonySdkRoot>
+		<OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == '' and $(RuntimeIdentifier.EndsWith('-arm64'))">arm64-v8a</OpenHarmonyAbi>
+		<OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == '' and $(RuntimeIdentifier.EndsWith('-x64'))">x86_64</OpenHarmonyAbi>
+		<OpenHarmonyTargetTriple Condition="'$(OpenHarmonyTargetTriple)' == '' and '$(OpenHarmonyAbi)' == 'arm64-v8a'">aarch64-linux-ohos</OpenHarmonyTargetTriple>
+		<OpenHarmonyTargetTriple Condition="'$(OpenHarmonyTargetTriple)' == '' and '$(OpenHarmonyAbi)' == 'x86_64'">x86_64-linux-ohos</OpenHarmonyTargetTriple>
+		<OpenHarmonySdkResolverProject>$(MSBuildThisFileDirectory)OpenHarmonySdkResolver\OpenHarmonySdkResolver.csproj</OpenHarmonySdkResolverProject>
+		<OpenHarmonySdkResolverPropsPath Condition="'$(OpenHarmonySdkResolverPropsPath)' == ''">$([System.IO.Path]::GetFullPath('$(BaseIntermediateOutputPath)openharmony-sdk-$(OpenHarmonyApiLevel)-$(OpenHarmonyAbi).props', '$(MSBuildProjectDirectory)'))</OpenHarmonySdkResolverPropsPath>
+	</PropertyGroup>
+
+	<Import Project="$(OpenHarmonySdkResolverPropsPath)"
+			Condition="'$(OpenHarmonyTarget)' == 'true' and Exists('$(OpenHarmonySdkResolverPropsPath)')" />
+
+	 <PropertyGroup>
+        <!-- 根据当前系统生成 RuntimeIdentifier -->
+        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Windows')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture) == 'x64'">win-x64</HostRuntimeIdentifier>
+        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Windows')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'arm64'">win-arm64</HostRuntimeIdentifier>
+
+        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Linux')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'x64'">linux-x64</HostRuntimeIdentifier>
+        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Linux')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'arm64'">linux-arm64</HostRuntimeIdentifier>
+
+        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('macOS')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'x64'">osx-x64</HostRuntimeIdentifier>
+        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('macOS')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'arm64'">osx-arm64</HostRuntimeIdentifier>
+    </PropertyGroup>
+
+
+    <Target Name="PrintHostRuntimeIdentifier" BeforeTargets="Build">
+        <Message Text="Current Host RuntimeIdentifier:$(HostRuntimeIdentifier)" Importance="High" />
+    </Target>
+
+	<UsingTask TaskName="PrependPath"
+			   TaskFactory="RoslynCodeTaskFactory"
+			   AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+
+		<ParameterGroup>
+			<Value ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+
+		<Task>
+			<Using Namespace="System" />
+			<Using Namespace="System.IO" />
+			<Code Type="Fragment" Language="cs">
+				<![CDATA[
+          Environment.SetEnvironmentVariable("PATH", Value + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
+        ]]>
+			</Code>
+		</Task>
+
+	</UsingTask>
+
+	<Target Name="SetPathToClang"
+			BeforeTargets="SetupOSSpecificProps"
+			Condition="'$(OpenHarmonyTarget)' != 'true'">
+
+		<PrependPath Value="$(MSBuildThisFileDirectory)/fakeclang/$(HostRuntimeIdentifier)" />
+
+	</Target>
+
+	<Target Name="ConfigureOpenHarmonyToolchain"
+			BeforeTargets="SetupOSSpecificProps"
+			DependsOnTargets="ValidateOpenHarmonyResolvedSdk"
+			Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<!-- .NET 10 probes CppLinker inside SetupOSSpecificProps, so the SDK
+		     compiler must be selected before that target starts. -->
+		<PrependPath Value="$(OpenHarmonyNativeRoot)\llvm\bin" />
+		<PropertyGroup>
+			<CppCompilerAndLinker>clang++</CppCompilerAndLinker>
+			<CppCompilerAndLinkerAlternative />
+			<CppLinker>clang++</CppLinker>
+			<LinkerFlavor>lld</LinkerFlavor>
+			<CompressSymbols>false</CompressSymbols>
+		</PropertyGroup>
+	</Target>
+
+	<Target Name="ValidateOpenHarmonyRequestedProperties"
+			Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<Error Condition="'$(OpenHarmonyApiLevel)' == '25'"
+			   Text="API 25 is intentionally unsupported because no compatible SDK/image is available." />
+		<Error Condition="'$(OpenHarmonyApiLevel)' != '13' and '$(OpenHarmonyApiLevel)' != '14' and '$(OpenHarmonyApiLevel)' != '15' and '$(OpenHarmonyApiLevel)' != '16' and '$(OpenHarmonyApiLevel)' != '17' and '$(OpenHarmonyApiLevel)' != '18' and '$(OpenHarmonyApiLevel)' != '19' and '$(OpenHarmonyApiLevel)' != '20' and '$(OpenHarmonyApiLevel)' != '21' and '$(OpenHarmonyApiLevel)' != '22' and '$(OpenHarmonyApiLevel)' != '23' and '$(OpenHarmonyApiLevel)' != '24' and '$(OpenHarmonyApiLevel)' != '26'"
+			   Text="OpenHarmonyApiLevel must be one of 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, or 26." />
+		<Error Condition="'$(OpenHarmonyAbi)' != 'arm64-v8a' and '$(OpenHarmonyAbi)' != 'x86_64'"
+			   Text="OpenHarmonyAbi must be arm64-v8a or x86_64." />
+		<Error Condition="'$(OpenHarmonySdkRoot)' == ''"
+			   Text="OpenHarmonySdkRoot is required when OpenHarmonyTarget=true." />
+	</Target>
+
+	<Target Name="ResolveOpenHarmonySdk"
+			DependsOnTargets="ValidateOpenHarmonyRequestedProperties"
+			Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<Error Condition="!Exists('$(OpenHarmonySdkResolverProject)')"
+			   Text="OpenHarmony SDK resolver project was not found: '$(OpenHarmonySdkResolverProject)'." />
+		<Exec Command="dotnet run --project &quot;$(OpenHarmonySdkResolverProject)&quot; --configuration Release --no-launch-profile -- --sdk-root &quot;$(OpenHarmonySdkRoot)&quot; --api &quot;$(OpenHarmonyApiLevel)&quot; --output &quot;$(OpenHarmonySdkResolverPropsPath)&quot;" />
+		<Error Condition="!Exists('$(OpenHarmonySdkResolverPropsPath)')"
+			   Text="OpenHarmony SDK resolver did not produce '$(OpenHarmonySdkResolverPropsPath)'." />
+
+		<XmlPeek XmlInputPath="$(OpenHarmonySdkResolverPropsPath)" Query="/Project/PropertyGroup/OpenHarmonySdkFolder/text()">
+			<Output TaskParameter="Result" PropertyName="OpenHarmonySdkFolder" />
+		</XmlPeek>
+		<XmlPeek XmlInputPath="$(OpenHarmonySdkResolverPropsPath)" Query="/Project/PropertyGroup/OpenHarmonyNativeRoot/text()">
+			<Output TaskParameter="Result" PropertyName="OpenHarmonyNativeRoot" />
+		</XmlPeek>
+		<XmlPeek XmlInputPath="$(OpenHarmonySdkResolverPropsPath)" Query="/Project/PropertyGroup/OpenHarmonySdkManifestPath/text()">
+			<Output TaskParameter="Result" PropertyName="OpenHarmonySdkManifestPath" />
+		</XmlPeek>
+		<XmlPeek XmlInputPath="$(OpenHarmonySdkResolverPropsPath)" Query="/Project/PropertyGroup/OpenHarmonySdkManifestSha256/text()">
+			<Output TaskParameter="Result" PropertyName="OpenHarmonySdkManifestSha256" />
+		</XmlPeek>
+		<XmlPeek XmlInputPath="$(OpenHarmonySdkResolverPropsPath)" Query="/Project/PropertyGroup/OpenHarmonySdkPackageVersion/text()">
+			<Output TaskParameter="Result" PropertyName="OpenHarmonySdkPackageVersion" />
+		</XmlPeek>
+		<XmlPeek XmlInputPath="$(OpenHarmonySdkResolverPropsPath)" Query="/Project/PropertyGroup/OpenHarmonySdkReleaseType/text()">
+			<Output TaskParameter="Result" PropertyName="OpenHarmonySdkReleaseType" />
+		</XmlPeek>
+
+		<PropertyGroup>
+			<OpenHarmonySysroot>$(OpenHarmonyNativeRoot)\sysroot</OpenHarmonySysroot>
+			<OpenHarmonyClang>$(OpenHarmonyNativeRoot)\llvm\bin\clang.exe</OpenHarmonyClang>
+			<OpenHarmonyClangXX>$(OpenHarmonyNativeRoot)\llvm\bin\clang++.exe</OpenHarmonyClangXX>
+			<OpenHarmonyLinker>$(OpenHarmonyNativeRoot)\llvm\bin\ld.lld.exe</OpenHarmonyLinker>
+		</PropertyGroup>
+		<Message Text="Resolved OpenHarmony API $(OpenHarmonyApiLevel) from $(OpenHarmonySdkFolder) (manifest SHA-256 $(OpenHarmonySdkManifestSha256))."
+				 Importance="High" />
+	</Target>
+
+	<Target Name="ValidateOpenHarmonyResolvedSdk"
+			DependsOnTargets="ResolveOpenHarmonySdk"
+			Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<Error Condition="'$(OpenHarmonySdkFolder)' == '' or '$(OpenHarmonyNativeRoot)' == '' or '$(OpenHarmonySdkManifestSha256)' == ''"
+			   Text="OpenHarmony SDK resolver returned incomplete package metadata." />
+		<Error Condition="'$(OpenHarmonySysroot)' == '' or !Exists('$(OpenHarmonySysroot)')"
+			   Text="OpenHarmonySysroot was not found: '$(OpenHarmonySysroot)'." />
+		<Error Condition="'$(OpenHarmonyClang)' == '' or !Exists('$(OpenHarmonyClang)')"
+			   Text="OpenHarmonyClang was not found: '$(OpenHarmonyClang)'." />
+		<Error Condition="'$(OpenHarmonyClangXX)' == '' or !Exists('$(OpenHarmonyClangXX)')"
+			   Text="OpenHarmonyClangXX was not found: '$(OpenHarmonyClangXX)'." />
+		<Error Condition="'$(OpenHarmonyLinker)' == '' or !Exists('$(OpenHarmonyLinker)')"
+			   Text="OpenHarmonyLinker was not found: '$(OpenHarmonyLinker)'." />
+	</Target>
+
+	<!-- BEGIN: Works around ILCompiler targets not detecting this as a cross compilation -->
+	<Target Name="OverwriteTargetTriple"
+			AfterTargets="SetupOSSpecificProps"
+			BeforeTargets="LinkNative">
+
+		<PropertyGroup>
+			<CrossCompileRid />
+			<CrossCompileRid>$(RuntimeIdentifier)</CrossCompileRid>
+
+			<CrossCompileArch />
+			<CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-x64'))">x86_64</CrossCompileArch>
+			<CrossCompileArch Condition="$(CrossCompileRid.EndsWith('-arm64'))">aarch64</CrossCompileArch>
+
+			<TargetTriple />
+			<TargetTriple Condition="'$(CrossCompileArch)' != ''">$(CrossCompileArch)-linux-gnu</TargetTriple>
+			<TargetTriple Condition="'$(CrossCompileArch)' != '' and ($(CrossCompileRid.StartsWith('linux-musl')) or $(CrossCompileRid.StartsWith('alpine')))">$(CrossCompileArch)-linux-musl</TargetTriple>
+		</PropertyGroup>
+
+		<ItemGroup>
+			<LinkerArg Include="--target=$(TargetTriple)" />
+			<!-- libs such as libz -->
+			<LinkerArg Include="-L$(MSBuildThisFileDirectory)libs\$(RuntimeIdentifier)" Condition="$(RuntimeIdentifier.StartsWith('linux'))" />
+		</ItemGroup>
+
+	</Target>
+	<!-- END: Works around ILCompiler targets not detecting this as a cross compilation -->
+
+	<Target Name="ConfigureOpenHarmonyNativeAot"
+			AfterTargets="SetupOSSpecificProps"
+			BeforeTargets="LinkNative"
+			Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<PropertyGroup>
+			<CrossCompileRid>$(RuntimeIdentifier)</CrossCompileRid>
+			<CrossCompileArch Condition="'$(OpenHarmonyAbi)' == 'arm64-v8a'">aarch64</CrossCompileArch>
+			<CrossCompileArch Condition="'$(OpenHarmonyAbi)' == 'x86_64'">x86_64</CrossCompileArch>
+			<TargetTriple>$(OpenHarmonyTargetTriple)</TargetTriple>
+			<SysRoot>$(OpenHarmonySysroot)</SysRoot>
+			<CppCompilerAndLinker>$(OpenHarmonyClangXX)</CppCompilerAndLinker>
+			<CppCompilerAndLinkerAlternative />
+			<CppLinker>$(OpenHarmonyClangXX)</CppLinker>
+			<LinkerFlavor>lld</LinkerFlavor>
+		</PropertyGroup>
+		<ItemGroup>
+			<!-- OpenHarmony deliberately disables the unavailable GSS backend;
+			     keep OpenSSL support but do not request this missing static shim. -->
+			<NetCoreAppNativeLibrary Remove="System.Net.Security.Native" />
+			<DirectPInvoke Remove="System.Net.Security.Native" />
+			<NativeLibrary Remove="$(IlcFrameworkNativePath)libSystem.Net.Security.Native.a" />
+			<LinkerArg Include="--target=$(OpenHarmonyTargetTriple)" />
+			<LinkerArg Include="--sysroot=&quot;$(OpenHarmonySysroot)&quot;" />
+			<LinkerArg Include="-L&quot;$(OpenHarmonySysroot)/usr/lib&quot;" />
+			<LinkerArg Include="-L&quot;$(OpenHarmonySysroot)/usr/lib/$(OpenHarmonyTargetTriple)&quot;" />
+			<LinkerArg Include="-lc++_shared" />
+		</ItemGroup>
+	</Target>
+
+	<Target Name="RemoveOpenHarmonyUnavailableNativeLibraries"
+			AfterTargets="IlcCompile"
+			BeforeTargets="LinkNative"
+			Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<ItemGroup>
+			<NetCoreAppNativeLibrary Remove="System.Net.Security.Native" />
+			<DirectPInvoke Remove="System.Net.Security.Native" />
+			<NativeLibrary Remove="$(IlcFrameworkNativePath)libSystem.Net.Security.Native.a" />
+			<LinkerArg Remove="$(IlcFrameworkNativePath)libSystem.Net.Security.Native.a" />
+		</ItemGroup>
+	</Target>
+
+</Project>

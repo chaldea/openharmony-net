@@ -1,0 +1,24 @@
+name: Build and test
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  managed:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build and test the unified solution
+        shell: pwsh
+        run: ./build.ps1 -Target Test
+      - name: Package managed and build tools
+        shell: pwsh
+        run: ./build.ps1 -Target PackTools
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-and-tests
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/test-results/*.trx

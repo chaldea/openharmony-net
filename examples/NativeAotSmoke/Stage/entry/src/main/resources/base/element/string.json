@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "OpenHarmony .NET NativeAOT smoke test"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Dotnet NativeAOT"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Dotnet NativeAOT"
+    }
+  ]
+}

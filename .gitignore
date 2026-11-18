@@ -1,0 +1,57 @@
+### C#
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio cache/options directory
+.vs/
+
+# User-specific files
+*.suo
+*.user
+
+# Debug symbols
+*.pdb
+# Preserve symbols from the imported historical runtime payloads.
+!src/OpenHarmony.NET.Runtime/runtime.*/9.0.0/**/*.pdb
+
+# NuGet Packages
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+# .NET build artifacts
+artifacts/
+
+# Publish output
+publish/
+
+### Windows
+# Windows thumbnail cache files
+Thumbs.db
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows shortcuts
+*.lnk
+
+## issues
+issues/
+
+# HarmonyOS generated files and local credentials
+.hvigor/
+oh_modules/
+local.properties
+build-profile.local.json5
+*.p12
+*.p7b
+*.cer
+.dotnet/
+**/Stage/entry/build/
+**/Stage/entry/.cxx/
+**/Stage/entry/libs/
+feed/

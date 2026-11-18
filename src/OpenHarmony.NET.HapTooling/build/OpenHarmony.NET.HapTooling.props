@@ -1,0 +1,76 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!--
+		OpenHarmony.NET.HapTooling props
+		=================================
+		Imported automatically by NuGet when the consuming project references this
+		package (build/OpenHarmony.NET.HapTooling.props runs during the top props
+		pass, before targets evaluation).
+
+		These properties parameterize the BuildHap/VerifyHap/BuildApp/VerifyApp
+		targets that XEngine's HarmonyOSBuildPipeline invokes through
+		`dotnet msbuild <packageProject> -t:<target>`. Every property is gated on
+		`''` so an explicit -p: value (or an XEngine-generated csproj value) always
+		wins; the defaults exist only so a hand-driven `msbuild -t:BuildHap` works.
+	-->
+
+	<PropertyGroup>
+
+		<!-- Target ABI. arm64-v8a and x86_64 are the only supported HarmonyOS ABIs.
+			 Player.Sdk already derives this from RuntimeIdentifier; we mirror the
+			 default so HapTooling works standalone. -->
+		<OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == ''">arm64-v8a</OpenHarmonyAbi>
+
+		<!-- OpenHarmony API level for the SDK catalog lookup. The catalog ships the
+			 supported API set; 15 is the safest default (present since 5.0.3). -->
+		<OpenHarmonyApiLevel Condition="'$(OpenHarmonyApiLevel)' == ''">15</OpenHarmonyApiLevel>
+
+		<!-- Official OpenHarmony SDK root. Falls back to the OHOS_SDK_ROOT env var
+			 so a build works without -p:OpenHarmonySdkRoot when the env is set. -->
+		<OpenHarmonySdkRoot Condition="'$(OpenHarmonySdkRoot)' == ''">$(OHOS_SDK_ROOT)</OpenHarmonySdkRoot>
+
+		<!-- DevEco Studio install root. hvigorw lives under
+			 <DevEcoHome>\tools\hvigor\bin and the signing material under
+			 %USERPROFILE%\.ohos\config. Defaults to the canonical Windows path. -->
+		<DevEcoSdkHome Condition="'$(DevEcoSdkHome)' == ''">$(DEVECO_SDK_HOME)</DevEcoSdkHome>
+		<DevEcoSdkHome Condition="'$(DevEcoSdkHome)' == '' and Exists('C:\Program Files\Huawei\DevEco Studio\sdk')">C:\Program Files\Huawei\DevEco Studio\sdk</DevEcoSdkHome>
+
+		<!-- hvigorw discovery order (HvigorwResolver target picks the first hit):
+			 1. $(HvigorwPath)  - explicit override
+			 2. <DevEcoSdkHome>\..\tools\hvigor\bin\hvigorw(.bat)
+			 3. PATH lookup (`hvigorw`)
+			 The Blazor build-hap-matrix.ps1 contract assumes #3 works in a DevEco
+			 shell; we add #1 and #2 for CI without DevEco on PATH. -->
+		<HvigorwPath Condition="'$(HvigorwPath)' == ''"></HvigorwPath>
+
+		<!-- Stage directory. XEngine's HarmonyOSPlayerProjectGenerator emits a csproj
+			 that sets XEngineStageProjectDirectory=$(MSBuildThisFileDirectory)..\Stage,
+			 so by the time this props runs, $(XEngineStageProjectDirectory) is already
+			 absolute. The fallback covers a hand-driven build where only the
+			 HapTooling package is applied to a csproj sitting next to the Stage. -->
+		<XEngineStageProjectDirectory Condition="'$(XEngineStageProjectDirectory)' == '' and '$(MSBuildProjectDirectory)' != ''">$(MSBuildProjectDirectory)\..\Stage</XEngineStageProjectDirectory>
+
+		<!-- Absolute path to the already-published libxengine_player.so. REQUIRED for
+			 BuildHap/BuildApp; XEngine passes it via -p:XEnginePlayerLibraryPath. -->
+		<XEnginePlayerLibraryPath Condition="'$(XEnginePlayerLibraryPath)' == ''"></XEnginePlayerLibraryPath>
+		<XEnginePlayerLibraryName Condition="'$(XEnginePlayerLibraryName)' == ''">libxengine_player.so</XEnginePlayerLibraryName>
+
+		<!-- hvigor build mode (debug | release). Matches buildModeSet in
+			 build-profile.json5. Debug HAPs use DevEco auto-signing material. -->
+		<HapBuildMode Condition="'$(HapBuildMode)' == ''">debug</HapBuildMode>
+
+		<!-- Artifact relative paths declared in xengine-packaging.json. Mirrored here
+			 as properties so the targets can locate the produced HAP/APP without
+			 re-parsing the contract. They must stay byte-identical to the JSON. -->
+		<HapArtifact Condition="'$(HapArtifact)' == ''">entry/build/default/outputs/default/entry-default-signed.hap</HapArtifact>
+		<AppArtifact Condition="'$(AppArtifact)' == ''">entry/build/default/outputs/default/entry-default-signed.app</AppArtifact>
+
+		<!-- Native runtime libraries that the player .so links against and that must
+			 be staged into entry/libs/<abi>/ for a loadable HAP. libc++_shared.so is
+			 always required (the NativeAOT player links libc++); the rest are
+			 staged defensively from the Player.Sdk runtime pack when present. -->
+			<OpenHarmonyStageNativeLibs Condition="'$(OpenHarmonyStageNativeLibs)' == ''">libc++_shared.so;libSystem.Net.Security.Native.so;libcrypto.so.3;libssl.so.3</OpenHarmonyStageNativeLibs>
+
+	</PropertyGroup>
+
+</Project>

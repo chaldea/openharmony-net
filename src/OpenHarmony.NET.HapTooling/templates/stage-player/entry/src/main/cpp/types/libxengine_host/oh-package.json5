@@ -1,0 +1,6 @@
+{
+  "name": "libxengine_host.so",
+  "types": "./index.d.ts",
+  "version": "1.0.0",
+  "description": "Type declarations for the xengine_host NAPI module (XComponent surface host for the XEngine player)."
+}

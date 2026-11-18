@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "supportedApis": [13, 14, 15, 18, 20, 23, 26],
+  "buildApis": [13, 14, 15, 18, 20, 23, 26],
+  "nativeUnavailableApis": [],
+  "excludedApis": [25],
+  "packages": [
+    {
+      "apiLevel": 13,
+      "sdkFolderName": "13",
+      "version": "5.0.1.111",
+      "releaseType": "Release",
+      "manifestSha256": "435560bc7d74005a306e8ea04110fc19e5392556d6b10493cc9dd93f7e7f1853"
+    },
+    {
+      "apiLevel": 14,
+      "sdkFolderName": "14",
+      "version": "5.0.2.123",
+      "releaseType": "Release",
+      "manifestSha256": "0bc0ed1c01345bba9b453e93f5faf4b4f55f9d17850161d58742a734e324956c"
+    },
+    {
+      "apiLevel": 15,
+      "sdkFolderName": "15",
+      "version": "5.0.3.135",
+      "releaseType": "Release",
+      "manifestSha256": "0e0db0b79df8a26e18b7bd17fcced06242d66c8315822f4037a357bc211cecc8"
+    },
+    {
+      "apiLevel": 18,
+      "sdkFolderName": "18",
+      "version": "5.1.0.107",
+      "releaseType": "Release",
+      "manifestSha256": "16cac01a0f3829a89353e7117e823da2a5d4f3be1e6c3250024409f39f85f987"
+    },
+    {
+      "apiLevel": 20,
+      "sdkFolderName": "20",
+      "version": "6.0.0.47",
+      "releaseType": "Release",
+      "manifestSha256": "e7d4e0f7970ec5d8430f2935dc22b31effe06d9e8c725a16ff0706f8c60ec22c"
+    },
+    {
+      "apiLevel": 23,
+      "sdkFolderName": "23",
+      "version": "6.1.0.32",
+      "releaseType": "Release",
+      "manifestSha256": "475fa68431fcea117512ccea5bf303d0fa6bd9a2c2e4c6dcbe6567fd1ced3b44"
+    },
+    {
+      "apiLevel": 26,
+      "sdkFolderName": "26.0.0",
+      "version": "26.0.0.25",
+      "releaseType": "Beta",
+      "manifestSha256": "ee77347d990b6f99c07777993fb372e5fb55aa08e76a4c82e3253f8f9e094b16"
+    }
+  ]
+}

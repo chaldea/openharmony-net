@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.Build.NoTargets">
+
+	<PropertyGroup>
+
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<IsPackable>true</IsPackable>
+
+		<PackageId>OpenHarmony.NET.HapTooling</PackageId>
+		<Version Condition="'$(Version)' == ''">10.0.10-ohos.2-preview.1</Version>
+		<Authors>OpenHarmony.NET</Authors>
+		<Company>OpenHarmony.NET</Company>
+		<Description>Provider-owned HAP/APP packaging tooling for the XEngine HarmonyOS build pipeline. Exposes the BuildHap/VerifyHap/BuildApp/VerifyApp MSBuild targets that XEngine's HarmonyOSBuildPipeline invokes, plus the generic Stage template (Hvigor project skeleton, XComponent native-host wiring), the xengine-packaging.json contract, and the OpenHarmony SDK catalog consumed by HarmonyOSToolchainResolver.</Description>
+		<PackageProjectUrl>https://github.com/OpenHarmony-NET/OpenHarmony.NET.HapTooling</PackageProjectUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+
+		<!-- NoTargets ships no compile output; only the build/ targets, the Stage
+		     template, the packaging contract, and the catalog matter. -->
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
+
+	</PropertyGroup>
+
+	<!--
+		build/ is imported by NuGet into any project that PackageReferences this
+		package. The Stage template + schemas are shipped as plain package-root
+		files (NOT contentFiles) because XEngine reads them from the on-disk
+		Bundle, not from the restored package, once they are vendored.
+	-->
+
+	<ItemGroup>
+		<None Include="build\OpenHarmony.NET.HapTooling.props">
+			<Pack>true</Pack>
+			<PackagePath>build</PackagePath>
+		</None>
+		<None Include="build\OpenHarmony.NET.HapTooling.targets">
+			<Pack>true</Pack>
+			<PackagePath>build</PackagePath>
+		</None>
+		<None Include="README.md" Condition="Exists('README.md')">
+			<Pack>true</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
+	<!--
+		Ship the Stage template, the packaging contract, and the catalog at the
+		package root with the exact relative paths XEngine's HarmonyOSBundleImporter
+		projects into the vendored Bundle:
+		  templates/stage-player/...   (HarmonyOSHvigorProjectGenerator reads these)
+		  schemas/sdk-catalog.json     (HarmonyOSToolchainResolver reads this)
+		Recursively pack everything under templates/ and schemas/.
+	-->
+	<ItemGroup>
+		<None Include="templates\**\*" Exclude="templates\**\*.bak">
+			<Pack>true</Pack>
+			<PackagePath>\templates</PackagePath>
+		</None>
+		<None Include="schemas\**\*">
+			<Pack>true</Pack>
+			<PackagePath>\schemas</PackagePath>
+		</None>
+		<None Include="native\**\*">
+			<Pack>true</Pack>
+			<PackagePath>\native</PackagePath>
+		</None>
+	</ItemGroup>
+
+</Project>

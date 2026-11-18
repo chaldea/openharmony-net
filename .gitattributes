@@ -1,0 +1,5 @@
+* text=auto
+# Release checksums describe exact bytes, including line endings.
+/src/OpenHarmony.NET.Runtime/release/** -text
+# Keep imported .NET 9 binaries and accompanying SDK documentation byte-for-byte.
+/src/OpenHarmony.NET.Runtime/runtime.*/9.0.0/** -text -whitespace

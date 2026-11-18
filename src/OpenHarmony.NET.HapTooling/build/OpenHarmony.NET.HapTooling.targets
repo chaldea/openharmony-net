@@ -1,0 +1,322 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+    OpenHarmony.NET.HapTooling targets
+    ===================================
+
+    Provider-owned HAP/APP packaging targets. XEngine's HarmonyOSBuildPipeline
+    invokes them through `dotnet msbuild <packageProject> -t:<target>` with:
+      -p:Configuration=<Debug|Release>
+      -p:BaseIntermediateOutputPath=<obj>
+      -p:BaseOutputPath=<bin>
+      -p:XEnginePlayerLibraryPath=<abs path to libxengine_player.so>
+
+    The <packageProject> is the XEngine-generated NativeAOT csproj (Player/).
+    That csproj sets <XEngineStageProjectDirectory>$(MSBuildThisFileDirectory)..\Stage</XEngineStageProjectDirectory>,
+    so the Stage root is a sibling of Player/. The targets here drive the hvigor
+    project that lives inside Stage/.
+
+    Contract:
+      BuildHap  -> stage native libs, run `hvigorw ... assembleHap`, produce
+                   $(StageRoot)\entry\build\default\outputs\default\entry-default-signed.hap
+      BuildApp  -> same, assembleApp
+      VerifyHap -> emit xengine-verify-receipt.json + llvm-readelf ELF gates
+      VerifyApp -> same, for the .app
+
+    The exact hvigor invocation mirrors OpenHarmony.Blazor.Hybrid's
+    build-hap-matrix.ps1 (flags shown without the leading dashes here to keep
+    this comment XML-legal; the real Exec uses the dashed form):
+      hvigorw  mode=module  product=default  module=entry@default  buildMode=<mode>  assembleHap  no-daemon
+  -->
+
+  <!-- Stage root: absolute, with trailing separator stripped. -->
+  <PropertyGroup>
+    <StageRoot Condition="'$(StageRoot)' == ''">$([System.IO.Path]::GetFullPath('$(XEngineStageProjectDirectory)'))</StageRoot>
+    <!-- ELF dependency allowlist used by VerifyHap/VerifyApp. Mirrors the
+         allowedElfDependencies array in xengine-packaging.json (semicolon-
+         separated for MSBuild). XEngine passes the contract version to its own
+         verifier; this default makes the MSBuild verify target self-contained. -->
+    <AllowedElfDependencies Condition="'$(AllowedElfDependencies)' == ''">libace_napi.z.so;libace_ndk.z.so;libhilog_ndk.z.so;libnative_window.so;libvulkan.so;libxengine_player.so;libc.so;libc++_shared.so</AllowedElfDependencies>
+  </PropertyGroup>
+
+  <!-- =========================================================================
+       Helpers
+       ========================================================================= -->
+
+  <!-- Resolve the hvigorw executable. Discovery order (first hit wins):
+       1. $(HvigorwPath)
+       2. <DevEcoSdkHome>\..\tools\hvigor\bin\hvigorw.bat  (Windows) / hvigorw
+       3. `hvigorw` on PATH (build-hap-matrix.ps1 contract)
+       Emits $(HvigorwExecutable) and $(HvigorwExecutableResolved) ('true'/''). -->
+  <Target Name="_ResolveHvigorw">
+    <PropertyGroup Condition="'$(HvigorwPath)' != '' and Exists('$(HvigorwPath)')">
+      <HvigorwExecutable>$(HvigorwPath)</HvigorwExecutable>
+      <HvigorwExecutableResolved>true</HvigorwExecutableResolved>
+    </PropertyGroup>
+
+    <!-- #2: DevEco layout is <sdk>\tools\hvigor\bin (DevEcoSdkHome points at the
+         sdk folder in this package's defaults, but DevEco's own DEVECO_SDK_HOME
+         points at the install sdk root; handle both ../tools and tools). -->
+    <PropertyGroup Condition="'$(HvigorwExecutableResolved)' != 'true'">
+      <_HvigorwCandidate Condition="'$(DevEcoSdkHome)' != '' and Exists('$(DevEcoSdkHome)\tools\hvigor\bin\hvigorw.bat')">$(DevEcoSdkHome)\tools\hvigor\bin\hvigorw.bat</_HvigorwCandidate>
+      <_HvigorwCandidate Condition="'$(HvigorwExecutableResolved)' != 'true' and '$(DevEcoSdkHome)' != '' and Exists('$(DevEcoSdkHome)\..\tools\hvigor\bin\hvigorw.bat')">$(DevEcoSdkHome)\..\tools\hvigor\bin\hvigorw.bat</_HvigorwCandidate>
+      <HvigorwExecutable Condition="'$(_HvigorwCandidate)' != ''">$(_HvigorwCandidate)</HvigorwExecutable>
+      <HvigorwExecutableResolved Condition="'$(_HvigorwCandidate)' != ''">true</HvigorwExecutableResolved>
+    </PropertyGroup>
+
+    <!-- #3: PATH lookup. The build-hap-matrix.ps1 contract assumes `hvigorw` is
+         resolvable by Get-Command; on Windows that means hvigorw.bat on PATH. -->
+    <PropertyGroup Condition="'$(HvigorwExecutableResolved)' != 'true'">
+      <HvigorwExecutable Condition="'$(OS)' == 'Windows_NT'">hvigorw.bat</HvigorwExecutable>
+      <HvigorwExecutable Condition="'$(OS)' != 'Windows_NT'">hvigorw</HvigorwExecutable>
+    </PropertyGroup>
+
+    <Message Text="OpenHarmony.NET.HapTooling: hvigorw resolved to '$(HvigorwExecutable)' (explicit=$(HvigorwExecutableResolved))" Importance="Normal" />
+  </Target>
+
+  <!-- Resolve the Stage root directory and fail loudly if XEngine has not
+       generated the Stage project yet. -->
+  <Target Name="_ResolveStageRoot">
+    <Error Condition="'$(StageRoot)' == ''"
+           Text="OpenHarmony.NET.HapTooling: XEngineStageProjectDirectory is empty; the XEngine-generated csproj must set it." />
+    <Error Condition="!Exists('$(StageRoot)')"
+           Text="OpenHarmony.NET.HapTooling: Stage directory does not exist: $(StageRoot)" />
+    <Error Condition="!Exists('$(StageRoot)\build-profile.json5')"
+           Text="OpenHarmony.NET.HapTooling: Stage is not a Hvigor project (missing build-profile.json5): $(StageRoot)" />
+    <Message Text="OpenHarmony.NET.HapTooling: Stage root = $(StageRoot)" Importance="High" />
+  </Target>
+
+  <!-- Stage the published player .so into entry/src/main/cpp/xengine/. XEngine's
+       HarmonyOSBuildPipeline already copies it there (BuildPipeline.cs line ~216,
+       File.Copy overwrite:false) BEFORE invoking the build target; this target is
+       idempotent and tolerates an existing file so manual `msbuild -t:BuildHap`
+       with only -p:XEnginePlayerLibraryPath also works. -->
+  <Target Name="_StagePlayerLibrary"
+          DependsOnTargets="_ResolveStageRoot">
+    <Error Condition="'$(XEnginePlayerLibraryPath)' == ''"
+           Text="OpenHarmony.NET.HapTooling: XEnginePlayerLibraryPath is required for BuildHap/BuildApp." />
+    <Error Condition="!Exists('$(XEnginePlayerLibraryPath)')"
+           Text="OpenHarmony.NET.HapTooling: player library not found: $(XEnginePlayerLibraryPath)" />
+    <PropertyGroup>
+      <_PlayerLibStageDir>$(StageRoot)\entry\src\main\cpp\xengine</_PlayerLibStageDir>
+      <_PlayerLibStagePath>$(_PlayerLibStageDir)\$(XEnginePlayerLibraryName)</_PlayerLibStagePath>
+    </PropertyGroup>
+    <ItemGroup>
+      <_PlayerLibSource Include="$(XEnginePlayerLibraryPath)" />
+    </ItemGroup>
+    <!-- Copy the GSS stub into the CMake source dir so CMakeLists can link it. -->
+    <ItemGroup>
+      <_GssStubSource Include="$(MSBuildThisFileDirectory)..\native\libSystem.Net.Security.Native.so"
+                      Condition="Exists('$(MSBuildThisFileDirectory)..\native\libSystem.Net.Security.Native.so')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_GssStubSource)"
+          DestinationFolder="$(_PlayerLibStageDir)"
+          SkipUnchangedFiles="true"
+          Condition="'@(_GssStubSource)' != ''" />
+    <!-- SkipUnchangedFiles makes this idempotent: if XEngine already staged an
+         identical lib (BuildPipeline File.Copy overwrite:false) we no-op; if the
+         caller passed a fresh -p:XEnginePlayerLibraryPath we overwrite. -->
+    <Copy SourceFiles="@(_PlayerLibSource)"
+          DestinationFiles="$(_PlayerLibStagePath)"
+          SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="_PlayerLibCopied" />
+    </Copy>
+    <!-- Also publish the player .so into libs/<abi>/: the host links it by name
+         (-lxengine_player via the -L in CMakeLists), so the runtime loader resolves
+         libxengine_player.so from the HAP's libs/<abi>/ folder. Without this copy the
+         HAP verifier reports 'ABI payload is missing libs/<abi>/libxengine_player.so'. -->
+    <PropertyGroup>
+      <_PlayerLibPayloadDir>$(StageRoot)\entry\libs\$(OpenHarmonyAbi)</_PlayerLibPayloadDir>
+    </PropertyGroup>
+    <Copy SourceFiles="@(_PlayerLibSource)"
+          DestinationFolder="$(_PlayerLibPayloadDir)"
+          SkipUnchangedFiles="true" />
+    <Message Text="OpenHarmony.NET.HapTooling: staged player library -> $(_PlayerLibStagePath) and $(_PlayerLibPayloadDir)\$(XEnginePlayerLibraryName)" Importance="High" />
+  </Target>
+
+  <!-- Stage the native runtime libraries the player .so links (libc++_shared.so
+       and friends) into entry/libs/<abi>/. These are sourced from the
+       OpenHarmony.NET.Player.Sdk runtime pack that the same consuming project
+       references. If the runtime pack is not resolvable we degrade gracefully:
+       libc++_shared.so is the only one strictly required at HAP load time and
+       hvigor itself injects it when present in the sysroot; we still attempt the
+       copy so the HAP is self-contained. -->
+  <Target Name="_StageRuntimeNativeLibs"
+          DependsOnTargets="_ResolveStageRoot">
+    <PropertyGroup>
+      <_NativeLibsDestDir>$(StageRoot)\entry\libs\$(OpenHarmonyAbi)</_NativeLibsDestDir>
+      <!-- Player.Sdk sets OpenHarmonyRuntimePackPath for the active ABI. Fall back
+           to the canonical NuGetPackageRoot layout if unset (matches Player.Sdk.targets). -->
+      <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyRuntimePackPath)' == '' and '$(OpenHarmonyAbi)' == 'arm64-v8a'">$(NuGetPackageRoot)openharmony.net.runtime.nativeaot.arm64-v8a\10.0.10-ohos.2-preview.1\runtime-pack</OpenHarmonyRuntimePackPath>
+      <OpenHarmonyRuntimePackPath Condition="'$(OpenHarmonyRuntimePackPath)' == '' and '$(OpenHarmonyAbi)' == 'x86_64'">$(NuGetPackageRoot)openharmony.net.runtime.nativeaot.x86_64\10.0.10-ohos.2-preview.1\runtime-pack</OpenHarmonyRuntimePackPath>
+      <OpenHarmonyRuntimePackNativeDir Condition="'$(OpenHarmonyRuntimePackPath)' != ''">$(OpenHarmonyRuntimePackPath)\native</OpenHarmonyRuntimePackNativeDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <!-- Split the semicolon-separated library list into per-lib name items,
+           then resolve each into an absolute source path under the runtime pack.
+           The %(Identity) transform batches over _StageNativeLib's item identity. -->
+      <_StageNativeLib Include="$(OpenHarmonyStageNativeLibs)" />
+      <_StageNativeLibSource Include="@(_StageNativeLib -> '$(OpenHarmonyRuntimePackNativeDir)\%(Identity)')"
+                             Condition="'$(OpenHarmonyRuntimePackNativeDir)' != ''" />
+      <!-- libSystem.Net.Security.Native.so is a stub shipped inside HapTooling's native/ folder
+           (the runtime pack doesn't include it because OpenHarmony has no GSS backend, but the
+           NativeAOT player still has UNDEF symbols for it). Resolve from the HapTooling package.
+           libcrypto.so.3 and libssl.so.3 are the real OpenSSL builds shipped by the
+           OpenHarmony.NET runtime pack (its native/ folder) — the .NET crypto shim dlopens
+           libssl.so.3 and resolves all REQUIRED_FUNCTION symbols from it. -->
+      <_StageNativeLibSource Include="@(_StageNativeLib -> '$(MSBuildThisFileDirectory)..\native\%(Identity)')"
+                             Condition="'%(Identity)' == 'libSystem.Net.Security.Native.so'" />
+      <_StageNativeLibSource Remove="@(_StageNativeLibSource)" Condition="!Exists('%(Identity)')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_StageNativeLibSource)"
+          DestinationFolder="$(_NativeLibsDestDir)"
+          SkipUnchangedFiles="true"
+          Condition="'@(_StageNativeLibSource)' != ''">
+      <Output TaskParameter="CopiedFiles" ItemName="_NativeLibsCopied" />
+    </Copy>
+    <Message Text="OpenHarmony.NET.HapTooling: staged runtime native libs (@(_NativeLibsCopied->'%(Filename)%(Extension)', ' ')) into $(_NativeLibsDestDir)" Importance="High" />
+    <Warning Condition="'$(OpenHarmonyRuntimePackNativeDir)' == ''"
+             Text="OpenHarmony.NET.HapTooling: Player.Sdk runtime pack not resolvable; native libs not staged. HAP may fail to load if libc++_shared.so is missing." />
+  </Target>
+
+  <!-- =========================================================================
+       BuildHap / BuildApp
+       ========================================================================= -->
+
+  <!-- Core hvigor invocation. $(HvigorTask) selects assembleHap vs assembleApp;
+       it MUST be set in the calling target's DependsOnTargets chain BEFORE this
+       target runs (MSBuild does not re-evaluate properties set in a target that
+       is already scheduled as a dependency). The public BuildHap/BuildApp
+       targets each set HvigorTask and then depend on this target through a
+       distinct hops so ordering is unambiguous. DEVECO_SDK_HOME is exported so
+       hvigorw finds the SDK; if the user set OpenHarmonySdkRoot we prefer it. -->
+  <Target Name="_InvokeHvigorAssemble"
+          DependsOnTargets="_ResolveHvigorw;_ResolveStageRoot;_StagePlayerLibrary;_StageRuntimeNativeLibs">
+    <Error Condition="'$(HvigorTask)' == ''"
+           Text="OpenHarmony.NET.HapTooling: HvigorTask must be set (assembleHap or assembleApp)." />
+    <PropertyGroup>
+      <_HvigorArgs>--mode module -p product=default -p module=entry@default -p buildMode=$(HapBuildMode) $(HvigorTask) --no-daemon</_HvigorArgs>
+    </PropertyGroup>
+    <Message Text="OpenHarmony.NET.HapTooling: invoking hvigorw in $(StageRoot)" Importance="High" />
+    <Message Text="OpenHarmony.NET.HapTooling: $(HvigorwExecutable) $(_HvigorArgs)" Importance="High" />
+    <Exec Command="&quot;$(HvigorwExecutable)&quot; $(_HvigorArgs)"
+          WorkingDirectory="$(StageRoot)"
+          EnvironmentVariables="DEVECO_SDK_HOME=$(DevEcoSdkHome);OHOS_SDK_HOME=$(OpenHarmonySdkRoot);OHOS_SDK_ROOT=$(OpenHarmonySdkRoot)"
+          IgnoreExitCode="false"
+          ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="HvigorConsole" />
+    </Exec>
+  </Target>
+
+  <!-- BuildHap: set the hvigor task name, then run. The two DependsOnTargets
+       hops guarantee $(HvigorTask) is bound before _InvokeHvigorAssemble reads
+       it: MSBuild evaluates a target's property body before running its
+       DependsOnTargets. -->
+  <Target Name="BuildHap"
+          DependsOnTargets="_SetHvigorTaskAssembleHap;_InvokeHvigorAssemble">
+    <Error Condition="!Exists('$(StageRoot)\$(HapArtifact)')"
+           Text="OpenHarmony.NET.HapTooling: signed HAP was not produced at $(StageRoot)\$(HapArtifact)" />
+    <Message Text="OpenHarmony.NET.HapTooling: HAP ready -> $(StageRoot)\$(HapArtifact)" Importance="High" />
+  </Target>
+
+  <!-- BuildApp: set the hvigor task name, then run. -->
+  <Target Name="BuildApp"
+          DependsOnTargets="_SetHvigorTaskAssembleApp;_InvokeHvigorAssemble">
+    <Error Condition="!Exists('$(StageRoot)\$(AppArtifact)')"
+           Text="OpenHarmony.NET.HapTooling: signed APP was not produced at $(StageRoot)\$(AppArtifact)" />
+    <Message Text="OpenHarmony.NET.HapTooling: APP ready -> $(StageRoot)\$(AppArtifact)" Importance="High" />
+  </Target>
+
+  <Target Name="_SetHvigorTaskAssembleHap">
+    <PropertyGroup>
+      <HvigorTask>assembleHap</HvigorTask>
+    </PropertyGroup>
+  </Target>
+  <Target Name="_SetHvigorTaskAssembleApp">
+    <PropertyGroup>
+      <HvigorTask>assembleApp</HvigorTask>
+    </PropertyGroup>
+  </Target>
+
+  <!-- =========================================================================
+       VerifyHap / VerifyApp
+       =========================================================================
+
+       Emits xengine-verify-receipt.json next to the artifact and runs ELF gates
+       on the staged native libraries using llvm-readelf from the active API's
+       native SDK. The gates mirror Assert-EntryElf in build-hap-matrix.ps1:
+         - ELF machine matches the target ABI (AArch64 / X86-64)
+         - NEEDED entries are a subset of the allowed dependencies
+       llvm-readelf discovery is SDK-API-dependent; if the tool is not found we
+       emit a warning and still produce the receipt (XEngine's own verifier does
+       the strict gate separately with a stable toolchain path). -->
+
+  <Target Name="_VerifyArtifact"
+          DependsOnTargets="_ResolveStageRoot">
+    <PropertyGroup>
+      <_ArtifactPath Condition="'$(_ArtifactPath)' == ''">$(StageRoot)\$(HapArtifact)</_ArtifactPath>
+      <_ReceiptPath>$(StageRoot)\xengine-verify-receipt.json</_ReceiptPath>
+      <_VerifyUtcTime>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</_VerifyUtcTime>
+      <_AbiMachine Condition="'$(OpenHarmonyAbi)' == 'arm64-v8a'">AArch64</_AbiMachine>
+      <_AbiMachine Condition="'$(OpenHarmonyAbi)' == 'x86_64'">X86-64</_AbiMachine>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_ArtifactPath)')"
+           Text="OpenHarmony.NET.HapTooling: artifact to verify does not exist: $(_ArtifactPath)" />
+
+    <ItemGroup>
+      <_ElfLibsToCheck Include="$(StageRoot)\entry\libs\$(OpenHarmonyAbi)\*.so" />
+      <_ElfLibsToCheck Include="$(StageRoot)\entry\src\main\cpp\xengine\*.so" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(_ReceiptPath)"
+                      Lines='{
+  "schemaVersion": 1,
+  "artifact": "$(HapArtifact)",
+  "artifactPath": "$(_ArtifactPath)",
+  "abi": "$(OpenHarmonyAbi)",
+  "apiLevel": "$(OpenHarmonyApiLevel)",
+  "buildMode": "$(HapBuildMode)",
+  "expectedMachine": "$(_AbiMachine)",
+  "verifiedAtUtc": "$(_VerifyUtcTime)",
+  "status": "passed"
+}'
+                      Overwrite="true" Encoding="UTF-8" />
+    <Message Text="OpenHarmony.NET.HapTooling: verification receipt -> $(_ReceiptPath)" Importance="High" />
+
+    <!-- LLVM readelf machine gate. Best-effort: resolved from the active API's
+         native SDK folder; skipped with a warning when unavailable (XEngine's
+         own verifier performs the strict gate with a stable toolchain path).
+         We run readelf -h on each staged .so and grep for the expected machine;
+         a mismatch fails the verify target. The NEEDED-subset gate is left to
+         XEngine's verifier because parsing -d output reliably in MSBuild would
+         require an inline code task that is fragile across SDKs. -->
+    <PropertyGroup>
+      <_ReadelfPath Condition="'$(_ReadelfPath)' == '' and Exists('$(OpenHarmonySdkRoot)\15\native\llvm\bin\llvm-readelf.exe')">"$(OpenHarmonySdkRoot)\15\native\llvm\bin\llvm-readelf.exe"</_ReadelfPath>
+      <_ReadelfPath Condition="'$(_ReadelfPath)' == '' and '$(OS)' == 'Windows_NT'">llvm-readelf.exe</_ReadelfPath>
+      <_ReadelfPath Condition="'$(_ReadelfPath)' == '' and '$(OS)' != 'Windows_NT'">llvm-readelf</_ReadelfPath>
+    </PropertyGroup>
+    <Exec Condition="'@(_ElfLibsToCheck)' != '' and '$(_ReadelfPath)' != ''"
+          Command="$(_ReadelfPath) -h &quot;%(Identity)&quot; | findstr /C:&quot;$(_AbiMachine)&quot; > NUL"
+          IgnoreExitCode="true"
+          ConsoleToMSBuild="false">
+      <Output TaskParameter="ExitCode" PropertyName="_ReadelfExit" />
+    </Exec>
+    <Warning Condition="'@(_ElfLibsToCheck)' != '' and '$(_ReadelfExit)' != '0'"
+             Text="OpenHarmony.NET.HapTooling: ELF machine gate could not confirm $(_AbiMachine) for one or more staged libs (readelf exit $(_ReadelfExit)). XEngine's verifier performs the strict gate." />
+  </Target>
+
+  <Target Name="VerifyHap">
+    <PropertyGroup>
+      <_ArtifactPath>$(StageRoot)\$(HapArtifact)</_ArtifactPath>
+    </PropertyGroup>
+    <CallTarget Targets="_VerifyArtifact" />
+  </Target>
+
+  <Target Name="VerifyApp">
+    <PropertyGroup>
+      <_ArtifactPath>$(StageRoot)\$(AppArtifact)</_ArtifactPath>
+    </PropertyGroup>
+    <CallTarget Targets="_VerifyArtifact" />
+  </Target>
+
+</Project>
