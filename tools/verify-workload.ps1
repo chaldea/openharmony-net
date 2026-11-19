@@ -12,13 +12,15 @@ param(
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
 $DotnetRoot = [IO.Path]::GetFullPath($DotnetRoot)
-$dotnet = Join-Path $DotnetRoot 'dotnet.exe'
+$executableExtension = if ($env:OS -eq 'Windows_NT') { '.exe' } else { '' }
+$dotnet = Join-Path $DotnetRoot "dotnet$executableExtension"
 if (!$PackageSource) { $PackageSource = Join-Path $repository 'artifacts/packages' }
 if ($PackageSource -notmatch '^https?://') { $PackageSource = [IO.Path]::GetFullPath($PackageSource) }
 $sdkVersion = (& $dotnet --version).Trim()
 if ($LASTEXITCODE -ne 0 -or $sdkVersion -notmatch '^10\.0\.(\d+)$') { throw 'Select a .NET 10 SDK.' }
 $featureBand = '10.0.' + ([int][Math]::Floor([int]$Matches[1] / 100) * 100)
 $records = @((Join-Path $DotnetRoot "metadata/workloads/X64/$featureBand/InstalledWorkloads/harmonyos"),
+    (Join-Path $DotnetRoot "metadata/workloads/Arm64/$featureBand/InstalledWorkloads/harmonyos"),
     (Join-Path $DotnetRoot "metadata/workloads/$featureBand/InstalledWorkloads/harmonyos"))
 if ((Test-Path -LiteralPath $records) -contains $true) { throw 'Use a standalone SDK without harmonyos installed. This verification exercises install/uninstall.' }
 $runRoot = Join-Path $repository ('artifacts/wl-test/' + [guid]::NewGuid().ToString('N').Substring(0,8))
@@ -26,7 +28,7 @@ New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
 $projectRoot = Join-Path $runRoot 'app'
 $project = Join-Path $projectRoot 'WorkloadSmoke.csproj'
 $oldEnvironment = @{}
-foreach ($name in @('PATH','DOTNET_ROOT','DOTNET_ROOT_X64','NUGET_PACKAGES','OHOS_COMMAND_LINE_TOOLS','OHOS_SDK_ROOT','JAVA_HOME','DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE')) {
+foreach ($name in @('PATH','DOTNET_ROOT','DOTNET_ROOT_X64','DOTNET_ROOT_ARM64','NUGET_PACKAGES','OHOS_COMMAND_LINE_TOOLS','OHOS_SDK_ROOT','JAVA_HOME','DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE')) {
     $oldEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 $installed = $false
@@ -43,6 +45,7 @@ function Invoke-Dotnet {
     }
     finally { $ErrorActionPreference = $previous }
     $text = Get-Content -Raw -Encoding UTF8 $log
+    if ($code -ne 0) { Write-Host $text }
     if ($ExpectedFailure) {
         if ($code -eq 0 -or $text -notmatch $ExpectedFailure) { throw "Expected failure '$ExpectedFailure' was not observed. See $log" }
     }
@@ -83,9 +86,10 @@ function Assert-Hap {
 }
 
 try {
-    $env:PATH = "$DotnetRoot;$env:PATH"
+    $env:PATH = @($DotnetRoot, $env:PATH) -join [IO.Path]::PathSeparator
     $env:DOTNET_ROOT = $DotnetRoot
     $env:DOTNET_ROOT_X64 = $DotnetRoot
+    $env:DOTNET_ROOT_ARM64 = $DotnetRoot
     $env:NUGET_PACKAGES = Join-Path $runRoot 'nuget'
     $env:OHOS_COMMAND_LINE_TOOLS = $CommandLineTools
     $env:OHOS_SDK_ROOT = $null
@@ -98,8 +102,8 @@ try {
     @{ sdk = @{ version = $sdkVersion; rollForward = 'disable' } } | ConvertTo-Json | Set-Content (Join-Path $runRoot 'global.json')
     $toolPath = Join-Path $runRoot 'tools'
     Invoke-Dotnet 'tool-install' @('tool','install','Chaldea.OpenHarmony.Workload','--tool-path',$toolPath,
-        '--version',$Version,'--add-source',$PackageSource,'--configfile',(Join-Path $runRoot 'NuGet.Config'))
-    & (Join-Path $toolPath 'harmonyos-workload.exe') --version > (Join-Path $runRoot 'tool-command.log')
+        '--version',$Version,'--source',$PackageSource,'--configfile',(Join-Path $runRoot 'NuGet.Config'))
+    & (Join-Path $toolPath "harmonyos-workload$executableExtension") --version > (Join-Path $runRoot 'tool-command.log')
     if ($LASTEXITCODE -ne 0) { throw 'The installed dotnet tool command failed.' }
     # Invoke the installed tool through its SDK host, so no system .NET runtime is needed.
     $toolDll = Join-Path $toolPath ".store/chaldea.openharmony.workload/$Version/chaldea.openharmony.workload/$Version/tools/net10.0/any/WorkloadInstaller.dll"
@@ -121,7 +125,7 @@ try {
     $deviceResult = $null
     if ($RunOnDevice) {
         Invoke-Dotnet 'run' @('run','--project',$project,"-p:OpenHarmonyDevice=$Device",'-p:OpenHarmonyBundleName=org.openharmony.dotnet.workloadsmoke')
-        $hdc = Join-Path $CommandLineTools 'sdk/default/openharmony/toolchains/hdc.exe'
+        $hdc = Join-Path $CommandLineTools "sdk/default/openharmony/toolchains/hdc$executableExtension"
         $deadline = (Get-Date).AddSeconds(60)
         do {
             $appPid = (& $hdc -t $Device shell pidof org.openharmony.dotnet.workloadsmoke | Out-String).Trim()

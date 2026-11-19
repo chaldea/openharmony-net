@@ -113,7 +113,23 @@ HAP 输出至 `artifacts/sample/`。本机 SDK/Java 路径通过参数提供，�
 
 五个第三方子模块的 URL 和提交由 `.gitmodules` / Git 索引固定。
 `src/`、`tests/`、`tools/` 和 `examples/` 中的改动直接提交到本仓库。
-统一的 CI 工作流位于 `.github/workflows/build.yml`，执行托管构建、测试和工具打包。
+统一的 CI 工作流位于 `.github/workflows/build.yml`，由 PR 或手动触发，push 不触发。
+`build` 在 Windows 执行托管构建、单元测试和工具打包，并上传 `workload-packages`。
+`test` 使用 Windows、Ubuntu、macOS 矩阵下载同一制品，安装独立的可写 .NET SDK、
+JDK 17 和 `ErBWs/setup-ohos@v2` 提供的 HarmonyOS CLI 6.1.1.280；Ubuntu 额外安装
+`libgl1`。CLI 根目录由 action 的 `HOS_SDK_HOME` 推导，先通过 `hvigorw -v` 检查。
+每个平台从制品安装工具和 workload，实际执行 `dotnet new ohos`、build、两种 ABI 的
+publish，检查 HAP 内原生库的 ELF 架构，并验证卸载和 workload restore。
+各平台独立上传 HAP、日志和 `result.json`；某个平台失败不会取消其他平台。
+
+PR 制品中的八个托管/工具包由当前源码构建。两个原生运行时包复用已发布的固定版本，
+由 `tools/prepare-ci-packages.ps1` 下载并按 `tools/ci-runtime-packages.json` 中的 SHA-256
+验证，与当前构建的包一起放入空的 `artifacts/ci-packages/`。这些哈希针对 NuGet
+下载包（含仓库签名），不能使用发布前本地 nupkg 的哈希代替。更新包版本时需要同步
+已发布运行时基线及哈希；PR 矩阵不替代运行时源码修改的完整发布验证。
+本地复现使用 `build.ps1 -Target PackTools`、`tools/prepare-ci-packages.ps1`，再给下面的
+`verify-workload.ps1` 传入 `-PackageSource ./artifacts/ci-packages`。
+
 原生 runtime 编译、签名和设备验收需要安装 Harmony 工具链的 Windows 主机。
 
 图形库产物存于 `artifacts/native/skia/{x86_64,arm64-v8a}/`，含源码/SDK/哈希 manifest。

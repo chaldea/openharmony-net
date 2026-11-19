@@ -13,7 +13,7 @@ public sealed class ManifestRegistrationTests : IDisposable
     private ManifestRegistration CreateRegistration()
     {
         Directory.CreateDirectory(Path.Combine(root, "sdk/10.0.301"));
-        File.WriteAllText(Path.Combine(root, "dotnet.exe"), "");
+        File.WriteAllText(Path.Combine(root, SdkInstallation.DotnetFileName), "");
         return new(new(root, "10.0.301", "10.0.300"), "10.0.300");
     }
 
@@ -60,6 +60,7 @@ public sealed class ManifestRegistrationTests : IDisposable
     [Theory]
     [InlineData("metadata/workloads/10.0.300/InstalledWorkloads")]
     [InlineData("metadata/workloads/X64/10.0.300/InstalledWorkloads")]
+    [InlineData("metadata/workloads/Arm64/10.0.300/InstalledWorkloads")]
     public void InstalledWorkloadMustBeUninstalledBeforeRemovalOrVersionChange(string recordDirectory)
     {
         var registration = CreateRegistration();

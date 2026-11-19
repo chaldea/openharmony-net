@@ -11,8 +11,9 @@ param(
 # Invoked by hap.ps1, which supplies Invoke-Tool / Require-File. Only the public
 # SDK development identity is used; certificates are bound to the chosen device.
 $ErrorActionPreference = 'Stop'
-$java = Join-Path $JavaHome 'bin/java.exe'
-$keytool = Join-Path $JavaHome 'bin/keytool.exe'
+$executableExtension = if ($env:OS -eq 'Windows_NT') { '.exe' } else { '' }
+$java = Join-Path $JavaHome "bin/java$executableExtension"
+$keytool = Join-Path $JavaHome "bin/keytool$executableExtension"
 $signTool = Join-Path $Toolchains 'lib/hap-sign-tool.jar'
 $sdkKeyStore = Join-Path $Toolchains 'lib/OpenHarmony.p12'
 Require-File $sdkKeyStore 'SDK development signing is unavailable; provide OpenHarmonySignedHapPath.'
@@ -32,7 +33,7 @@ Invoke-Tool $java @('-jar',$signTool,'generate-app-cert','-keyAlias','openharmon
     '-rootCaCertFile',$rootCert,'-subCaCertFile',$caCert,'-outForm','certChain','-outFile',$chain) | Write-Host
 $certificates = [regex]::Matches([IO.File]::ReadAllText($chain), '(?s)-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----')
 if ($certificates.Count -ne 3) { throw 'Expected a three-certificate development chain.' }
-$hdc = Join-Path $Toolchains 'hdc.exe'
+$hdc = Join-Path $Toolchains "hdc$executableExtension"
 $udid = ((Invoke-Tool $hdc @('-t',$Device,'shell','bm','get','-u')) -split '\r?\n' |
     ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[0-9A-Fa-f]{64}$' } | Select-Object -First 1)
 if ($udid -notmatch '^[0-9A-Fa-f]{64}$') { throw 'Cannot read the target device UDID.' }
