@@ -34,7 +34,7 @@ Test-Path "$env:JAVA_HOME\bin\java.exe"
 ### 2. 安装 workload
 
 ```powershell
-dotnet tool install -g Chaldea.OpenHarmony.Workload
+dotnet tool install -g Chaldea.OpenHarmony.Workload --version 10.0.10-ohos.2-preview.1
 harmonyos-workload init
 dotnet workload install harmonyos --skip-manifest-update
 dotnet workload list
@@ -97,6 +97,96 @@ dotnet publish -p:OpenHarmonyAbi=arm64-v8a
 最低应用平台为 API15，CLI 的编译 SDK 可以是更高版本；同时安装多个 Native SDK 时需
 显式选择 API。缺少 SDK 会报告 `OHOS1001` 并提示配置路径。当前模板提供最小 Stage
 应用壳，不包含 MAUI UI。
+
+## CI 集成：GitHub Actions 发布示例
+
+和android等发布流程一样，当前workload也支持在CI中集成，以github编译为例：
+
+```yaml
+name: Publish HarmonyOS app
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Setup dotnet
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      # Setup java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      # Setup HarmonyOS SDK
+      - uses: ErBWs/setup-ohos@v2
+        with:
+          version: '6.1.1.280'
+          cache: true
+      # Install workload
+      - name: Install workload
+        run: |
+          dotnet tool install -g Chaldea.OpenHarmony.Workload
+          harmonyos-workload init
+          dotnet workload install harmonyos --skip-manifest-update
+      # Build and publish your app
+      - name: Publish HAP
+        run: >-
+          dotnet publish xxxx
+```
+
+`setup-java` 提供 `JAVA_HOME`；`setup-ohos` 安装官方 CLI 和 SDK。`dotnet publish` 会自动执行NativeAOT编译并调用 Hvigor 打包，无需连接设备或启动模拟器。
+
+## 在应用中使用 SkiaSharp
+
+对于已经能构建的 `net10.0-ohos` workload 项目，添加`Chaldea.SkiaSharp.NativeAssets.HarmonyOS`包即可
+在项目中使用 SkiaSharp。该图形包是独立的nuget包，不随 workload 安装，直接添加到项目中即可。
+
+```powershell
+dotnet new ohos -n SkiaApp
+cd SkiaApp
+dotnet add package Chaldea.SkiaSharp.NativeAssets.HarmonyOS
+dotnet add package Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS
+```
+所建项目为`<TargetFramework>net10.0-ohos</TargetFramework>`的项目，在该项目上直接添加对应的包引用即可。
+普通 `net10.0`、桌面或 MAUI 项目，需要添加一个 HarmonyOS 应用宿主，可先创建 `ohos` 项目，再引用的业务项目。
+
+在模板的 `App.cs` 替换为下面代码，可验证 Skia 的 CPU 绘制：
+
+```csharp
+using SkiaSharp;
+
+public static class App
+{
+    public static int Run()
+    {
+        using var bitmap = new SKBitmap(64, 64);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.White);
+        using var paint = new SKPaint { Color = SKColors.CornflowerBlue };
+        canvas.DrawCircle(32, 32, 16, paint);
+        return bitmap.GetPixel(32, 32) == SKColors.CornflowerBlue ? 1 : 0;
+    }
+}
+```
+
+```powershell
+# x86_64 模拟器：默认页面显示返回值 1，表示像素检查通过。
+dotnet run
+
+# 发布 arm64 真机用 HAP。
+dotnet publish -p:OpenHarmonyAbi=arm64-v8a
+```
+
+`OpenHarmonyAbi` 自动选择对应的原生库，发布时会将 `libSkiaSharp.so`（以及引用了
+HarfBuzz 包时的 `libHarfBuzzSharp.so`）放入 HAP 的 `libs/<ABI>/`，无需手工配置复制。
+支持 API15+ 的 x86_64 和 arm64-v8a。
+
+**添加包提供绘图 API，不会自动创建 Skia 页面或 UI 控件。** 上面的代码只在内存中
+绘图，模板页面显示的是返回值。要在 ArkUI 中显示图像，还需将像素缓冲区通过 N-API
+传给 ArkTS，并创建 PixelMap 等显示对象。完整实现见
+[SkiaDemo](examples/SkiaDemo/README.md)：该示例使用 Player.Sdk 和自定义 Stage 页面，
+包含文字整形、像素传递和显示代码，可作为接入参考。
 
 ## 更新和卸载
 
