@@ -12,6 +12,7 @@ dotnet/                    第三方源码（Git submodule）
   core-origin/
   runtime/                 OpenHarmony runtime 移植
   runtime-origin/          上游比较基线
+  SkiaSharp/               SkiaSharp 2.88.9（包含固定提交的 Skia C API 源码）
 src/
   OpenHarmony.NDK.Bindings/
   OpenHarmony.NET.HapTooling/
@@ -21,10 +22,13 @@ src/
   OpenHarmony.NET.Templates/
   OpenHarmony.NET.Workload/
   PublishAotCross/
+  SkiaSharp.NativeAssets.HarmonyOS/
+  HarfBuzzSharp.NativeAssets.HarmonyOS/
 tests/                     绑定、生成器、SDK resolver、runtime packager 和 ABI 测试
 tools/                     生成器、打包器、构建和验证脚本
   WorkloadInstaller/       NuGet 分发的 harmonyos-workload 工具
 examples/NativeAotSmoke/    ArkTS → N-API → C# NativeAOT 最小应用
+examples/SkiaDemo/          Skia 绘图、HarfBuzz 字形整形与 ArkUI PixelMap 显示
 OpenHarmony.slnx            统一解决方案
 build.ps1                  构建入口
 ```
@@ -63,7 +67,12 @@ pwsh ./tools/prepare-native-dependencies.ps1 -SdkRoot ./artifacts/native/sdk
 # 构建 x64 和 arm64 的 .NET 10 NativeAOT、基础库及原生库。
 pwsh ./tools/build-runtime.ps1 -SdkRoot ./artifacts/native/sdk
 
-# 从上述产物生成带 manifest 的两个运行时包及八个工具/workload 包。
+# 编译 SkiaSharp / HarfBuzzSharp，需 Python 3.12+、Ninja 和固定版本上游源码。
+git submodule update --init dotnet/SkiaSharp
+git -C dotnet/SkiaSharp submodule update --init --depth 1 externals/skia
+pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
+
+# 生成两个运行时包、八个工具/workload 包和两个图形 NativeAssets 包。
 ./build.ps1 -Target Pack
 
 # 使用独立 NuGet 缓存验证 Player.Sdk 的两个架构及导出符号。
@@ -102,10 +111,14 @@ HAP 输出至 `artifacts/sample/`。本机 SDK/Java 路径通过参数提供，�
 
 ## 维护
 
-四个第三方子模块的 URL 和提交仍由 `.gitmodules` / Git 索引固定。
+五个第三方子模块的 URL 和提交由 `.gitmodules` / Git 索引固定。
 `src/`、`tests/`、`tools/` 和 `examples/` 中的改动直接提交到本仓库。
 统一的 CI 工作流位于 `.github/workflows/build.yml`，执行托管构建、测试和工具打包。
 原生 runtime 编译、签名和设备验收需要安装 Harmony 工具链的 Windows 主机。
+
+图形库产物存于 `artifacts/native/skia/{x86_64,arm64-v8a}/`，含源码/SDK/哈希 manifest。
+普通 `Build`、`Test`、`PackTools` 不要求这些原生产物，完整 `Pack` 缺少任一 ABI 时失败。
+参见 [Skia 示例](../examples/SkiaDemo/README.md) 和 [ISSUE-003 验证记录](ISSUE-003-validation.md)。
 
 发布流程及 runner/secrets 设置见 [NuGet 发布流程](releases.md)。验证新打包的工具和 workload：
 

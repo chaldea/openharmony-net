@@ -49,6 +49,11 @@ jobs:
           ./tools/prepare-native-dependencies.ps1 -SdkRoot ./artifacts/native/sdk
       - name: Build both NativeAOT runtimes from source
         run: ./tools/build-runtime.ps1 -SdkRoot ./artifacts/native/sdk
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build SkiaSharp and HarfBuzzSharp for both HarmonyOS ABIs
+        run: ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
       - name: Pack complete release
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.value }}
@@ -57,6 +62,12 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.value }}
         run: ./tools/verify-packages.ps1 -SdkRoot ./artifacts/native/sdk -Version $env:RELEASE_VERSION
+      - name: Verify graphics packages and both Skia demo HAP architectures
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          ./tools/verify-skia.ps1 -SdkRoot ./artifacts/native/sdk -Version $env:RELEASE_VERSION `
+            -CommandLineTools $env:OHOS_COMMAND_LINE_TOOLS -JavaHome $env:JAVA_HOME
       - name: Install a disposable SDK for workload verification
         run: |
           Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile ./artifacts/dotnet-install.ps1
@@ -86,6 +97,7 @@ jobs:
             artifacts/wl-test/*/*.log
             artifacts/wl-test/*/result.json
             artifacts/nuget-name-check.json
+            artifacts/skia-validation/*/result.json
   publish:
     needs: build
     runs-on: ubuntu-latest

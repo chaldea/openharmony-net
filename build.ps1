@@ -23,7 +23,7 @@ try {
         # NuGet's timestamp check does not notice a changed Git revision.
         $catalog = Get-Content -Raw (Join-Path $RepoRoot 'tools/release-packages.json') | ConvertFrom-Json
         foreach ($id in $catalog.packages) {
-            if ($Target -eq 'PackTools' -and $id -like '*.Runtime.NativeAot.*') { continue }
+            if ($Target -eq 'PackTools' -and ($id -like '*.Runtime.NativeAot.*' -or $id -like '*.NativeAssets.HarmonyOS')) { continue }
             $package = Join-Path $RepoRoot "artifacts/packages/$id.$Version.nupkg"
             if (Test-Path -LiteralPath $package) { Remove-Item -LiteralPath $package }
         }
@@ -38,6 +38,9 @@ try {
         & (Join-Path $PSScriptRoot 'tools/pack-workload.ps1') -Version $Version -Configuration $Configuration -NoBuild
     }
     if ($Target -eq 'Pack') {
+        foreach ($project in @('SkiaSharp.NativeAssets.HarmonyOS','HarfBuzzSharp.NativeAssets.HarmonyOS')) {
+            Invoke-Checked dotnet (@('pack',"src/$project/$project.csproj",'-c',$Configuration,'--no-build','--nologo') + $properties)
+        }
         if (!$RuntimeArtifacts) { $RuntimeArtifacts = Join-Path $RepoRoot 'artifacts/native/runtime' }
         if (!$SdkCatalog) { $SdkCatalog = Join-Path $RepoRoot 'dotnet/runtime/eng/openharmony/sdk-catalog.json' }
         $runtimeCommit = (& git -C dotnet/runtime rev-parse HEAD).Trim()

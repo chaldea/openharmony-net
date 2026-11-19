@@ -1,8 +1,10 @@
 # NuGet 发布流程
 
-本仓库使用 `Chaldea.OpenHarmony.*` 包名。源码目录、程序集名、C# 命名空间及
+本仓库的 .NET 工具使用 `Chaldea.OpenHarmony.*` 包名；图形扩展使用
+`Chaldea.SkiaSharp.NativeAssets.HarmonyOS` 和 `Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS`。
+源码目录、程序集名、C# 命名空间及
 `OpenHarmony*` MSBuild 属性保持原有命名；NuGet 自动导入的 props/targets 文件在打包时
-改为与新包名一致。完整十个包以 `tools/release-packages.json` 为准。
+改为与新包名一致。完整十二个包以 `tools/release-packages.json` 为准。
 
 ## 名称检查
 
@@ -23,7 +25,7 @@ repository URL 中指向本仓库，否则失败；网络或服务端错误也�
 ## Runner 和 secrets
 
 没有专用 runner 时，可使用 `.github/workflows/publish-prepared.yml`：先在已配置的开发主机
-从 release tag 构建并完成本文验证，将十个 nupkg 和 SHA256SUMS 上传为该 GitHub Release
+从 release tag 构建并完成本文验证，将十二个 nupkg 和 SHA256SUMS 上传为该 GitHub Release
 的附件，然后手动运行 **Publish validated release assets**，输入 tag。它在 GitHub 托管
 Windows runner 上重新检查哈希、包集合、内部依赖和与 tag 一致的源码 revision，再使用
 同一组 NuGet secrets 发布；不会重新执行原生编译或替代本地 HAP 验收。
@@ -32,21 +34,23 @@ Windows runner 上重新检查哈希、包集合、内部依赖和与 tag 一致
 它先在带 `self-hosted, Windows, X64, harmonyos` 标签的专用 runner 构建和验收，再在
 GitHub 托管的 Ubuntu runner 推送。不要把这个自托管 runner 用于不可信 PR。
 
-构建 runner 按 [项目维护](maintainers.md) 安装 Visual Studio C++、Git、PowerShell 7.3+，
+构建 runner 按 [项目维护](maintainers.md) 安装 Visual Studio C++、Git、PowerShell 7.3+、
+Python 3.12+ 和 Ninja，
 保留足够空间构建两个运行时，并配置：
 
 - `OHOS_COMMAND_LINE_TOOLS`：官方 command-line-tools 根目录，包含 SDK / ohpm / Hvigor。
 - `JAVA_HOME`：JDK 17+ 根目录。
-- 网络：允许访问官方 Native SDK、固定版本 ICU/OpenSSL、NuGet 和 .NET SDK 下载源。
+- 网络：允许访问官方 Native SDK、固定版本 ICU/OpenSSL、NuGet、.NET SDK、GitHub、
+  Google Source 和 GN 下载源；需要时在 runner 配置 HTTP_PROXY / HTTPS_PROXY。
 
 仓库或组织 Actions secrets：
 
 | secret | 值 |
 | --- | --- |
 | `NUGET_SOURCE` | 官方源 `https://api.nuget.org/v3/index.json` |
-| `NUGET_KEY` | 能发布 `Chaldea.OpenHarmony.*` 的 NuGet API key |
+| `NUGET_KEY` | 能发布 catalog 中全部 `Chaldea.*` 包的 NuGet API key |
 
-工具包、runtime 包、manifest 和 bootstrap tool 使用同一个 NuGet 版本；manifest 不再
+工具包、runtime 包、图形 NativeAssets、manifest 和 bootstrap tool 使用同一个 NuGet 版本；manifest 不再
 固定为 `10.0.10`。版本来自 tag 去掉 `v`，或手动输入，支持稳定版和预览版。
 SDK feature band 固定为当前验证的 `10.0.300`；发布其它 band 前需同步 catalog、
 `Directory.Build.props`、打包参数和工具的支持版本，并完成验证。
@@ -57,11 +61,13 @@ SDK feature band 固定为当前验证的 `10.0.300`；发布其它 band 前需�
 
 1. 检查 NuGet 名称，构建解决方案，运行单元测试。
 2. 下载并验证官方 API13/API15 Native SDK，构建 ICU/OpenSSL 和 x64/arm64 NativeAOT。
-3. 打包十个制品，验证改名后的 Player.Sdk 依赖及原生导出。
+3. 使用 API15 编译 x64/arm64 SkiaSharp 和 HarfBuzzSharp，打包十二个制品；验证 Player.Sdk
+   依赖及原生导出，以及使用新图形包生成的两个 SkiaDemo HAP。
 4. 安装一次性 .NET SDK，从本地源安装 dotnet tool，验证 init、workload 安装/卸载/恢复、
    x64 和 arm64 HAP。CI 不要求模拟器；设备运行由维护者额外验收。
 5. `prepare-release.ps1` 检查全部包的 ID、版本、仓库、内部依赖、manifest、runtime provenance；
-   只把 catalog 中的十个包复制到空的 release 目录，生成 SHA256SUMS。
+   同时验证图形库两种 ABI 的 ELF、哈希、固定源码 revision、托管 API 版本及许可证文件。
+   只把 catalog 中的十二个包复制到空的 release 目录，生成 SHA256SUMS。
 6. 上传审阅制品与验证日志；publish job 验证 SHA-256，按 pack → manifest → bootstrap tool
    顺序调用 `dotnet nuget push --source ... --api-key ... --skip-duplicate`。
 
@@ -74,11 +80,18 @@ SDK feature band 固定为当前验证的 `10.0.300`；发布其它 band 前需�
 
 ```powershell
 ./build.ps1 -Target Test
+pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
 ./build.ps1 -Target Pack -Version 10.0.10-ohos.2-preview.1
+./tools/verify-skia.ps1 -SdkRoot ./artifacts/native/sdk `
+  -CommandLineTools $env:OHOS_COMMAND_LINE_TOOLS -JavaHome $env:JAVA_HOME -RunOnDevice
 ./tools/check-nuget-names.ps1 -OutputPath ./artifacts/nuget-name-check.json
 # 输出目录必须为空，防止混入旧制品。
 ./tools/prepare-release.ps1 -Version 10.0.10-ohos.2-preview.1 -OutputDirectory ./artifacts/release-check
 ```
+
+图形包随本仓库发行线编号，但分别精确依赖 SkiaSharp 2.88.9、HarfBuzzSharp 7.3.0.3。
+升级上游时须同步原生源码、托管依赖和 provenance 校验，重新执行模拟器渲染验收。
+图形库是可选 NuGet 扩展，不加入 workload 的四个必需 pack。
 
 ## 工具开发与旧版本迁移
 
