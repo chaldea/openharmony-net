@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup>
+    <_HarmonyGraphicsAsset Include="libSkiaSharp.so" Root="$(MSBuildThisFileDirectory)../native" />
+  </ItemGroup>
+  <Import Project="common/HarmonyOS.NativeAssets.targets" Condition="'$(HarmonyGraphicsTargetsImported)' != 'true'" />
+</Project>

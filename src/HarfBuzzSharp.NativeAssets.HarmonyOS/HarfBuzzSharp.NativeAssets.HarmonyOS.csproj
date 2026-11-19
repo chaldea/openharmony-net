@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS</PackageId>
+    <NativeAssetName>libHarfBuzzSharp.so</NativeAssetName>
+    <Description>HarmonyOS API15+ x86_64 and arm64 native assets for HarfBuzzSharp 7.3.0.3.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="HarfBuzzSharp" Version="[7.3.0.3]" />
+  </ItemGroup>
+  <Import Project="../HarmonyOS.NativeAssets/NativeAssets.pack.targets" />
+</Project>

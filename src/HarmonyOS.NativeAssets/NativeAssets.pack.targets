@@ -1,0 +1,28 @@
+<Project>
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <Authors>OpenHarmony.NET</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <NativeAssetsRoot Condition="'$(NativeAssetsRoot)' == ''">$(RepositoryRoot)artifacts/native/skia</NativeAssetsRoot>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(NativeAssetsRoot)/x86_64/$(NativeAssetName)" Pack="true" PackagePath="native/x86_64/" />
+    <None Include="$(NativeAssetsRoot)/arm64-v8a/$(NativeAssetName)" Pack="true" PackagePath="native/arm64-v8a/" />
+    <None Include="$(NativeAssetsRoot)/x86_64/manifest.json" Pack="true" PackagePath="native/x86_64/" />
+    <None Include="$(NativeAssetsRoot)/arm64-v8a/manifest.json" Pack="true" PackagePath="native/arm64-v8a/" />
+    <None Include="$(NativeAssetsRoot)/THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="/" />
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" />
+    <None Include="$(MSBuildThisFileDirectory)../../LICENSE" Pack="true" PackagePath="/" />
+    <None Include="$(MSBuildProjectDirectory)/buildTransitive/$(PackageId).targets" Pack="true" PackagePath="buildTransitive/" />
+    <None Include="$(MSBuildThisFileDirectory)HarmonyOS.NativeAssets.targets" Pack="true" PackagePath="buildTransitive/common/" />
+  </ItemGroup>
+  <Target Name="ValidateHarmonyNativeAssets" BeforeTargets="GenerateNuspec">
+    <Error Condition="!Exists('$(NativeAssetsRoot)/x86_64/$(NativeAssetName)') or !Exists('$(NativeAssetsRoot)/arm64-v8a/$(NativeAssetName)')"
+           Text="Build both HarmonyOS native ABIs first: tools/build-skia.ps1 -SdkRoot artifacts/native/sdk" />
+    <Error Condition="!Exists('$(NativeAssetsRoot)/x86_64/manifest.json') or !Exists('$(NativeAssetsRoot)/arm64-v8a/manifest.json') or !Exists('$(NativeAssetsRoot)/THIRD-PARTY-NOTICES.txt')"
+           Text="HarmonyOS native build provenance or third-party notices are missing." />
+  </Target>
+</Project>

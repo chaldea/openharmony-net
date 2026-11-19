@@ -2,6 +2,8 @@
   "repository": "https://github.com/chaldea/openharmony-net",
   "featureBand": "10.0.300",
   "packages": [
+    "Chaldea.SkiaSharp.NativeAssets.HarmonyOS",
+    "Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS",
     "Chaldea.OpenHarmony.NDK.Bindings",
     "Chaldea.OpenHarmony.PublishAotCross",
     "Chaldea.OpenHarmony.HapTooling",

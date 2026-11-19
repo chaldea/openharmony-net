@@ -10,3 +10,6 @@
 [submodule "runtime-origin"]
 	path = dotnet/runtime-origin
 	url = https://github.com/dotnet/runtime.git
+[submodule "dotnet/SkiaSharp"]
+	path = dotnet/SkiaSharp
+	url = https://github.com/mono/SkiaSharp.git

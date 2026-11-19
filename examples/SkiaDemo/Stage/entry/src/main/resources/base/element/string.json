@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "SkiaSharp and HarfBuzzSharp rendering demo"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "SkiaSharp Demo"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "SkiaSharp Demo"
+    }
+  ]
+}

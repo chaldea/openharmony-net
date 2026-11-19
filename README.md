@@ -127,5 +127,6 @@ dotnet workload install harmonyos --skip-manifest-update
 
 - [源码布局、构建、测试与运行时编译](docs/maintainers.md)
 - [NuGet 发布工作流、包名审计和维护者配置](docs/releases.md)
+- [SkiaSharp / HarfBuzzSharp 图形包与渲染示例](examples/SkiaDemo/README.md)
 - [workload 实现与验证记录](docs/ISSUE-002-validation.md)
 - [运行时迁移与设备验证](docs/ISSUE-001-validation.md)

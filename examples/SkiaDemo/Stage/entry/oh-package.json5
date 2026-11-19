@@ -1,0 +1,5 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "dependencies": { "libsmoke.so": "file:./src/main/cpp/types/libsmoke" }
+}
