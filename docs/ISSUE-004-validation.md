@@ -36,10 +36,19 @@ macOS 的 ELF 链接器探测。HarmonyOS 使用官方 SDK 自带的 LLVM 工具
 | x86_64 | `24d210662cde8b308ebfd6f2a783a85a9d33a2ef057b268e4d5881f20aacefff` |
 | arm64-v8a | `38063f2f4bdfd53ccbc611f1330359b1bf02b4fd5ba2448f0123142890584167` |
 
-## 尚待 CI 确认
+## GitHub Actions 验证（2026-11-19）
 
-本机没有 Linux/macOS 执行环境，未运行这两个矩阵分支，也未执行设备安装运行。
-已检查 `ErBWs/setup-ohos@v2` 的源码、导出变量和 6.1.1.280 发布附件，确认其提供
-Windows x64、Linux x64、macOS x64/arm64 下载，并校验下载文件的 SHA-256。
-CI 中的 action 安装和 API24 SDK 打包仍需由 GitHub Actions 的实际结果确认；本机
-API26 成功不代表这三个 runner 的首次运行已经通过。
+主仓 [PR #2](https://github.com/chaldea/openharmony-net/pull/2) 的
+[CI 运行 44470831228](https://github.com/chaldea/openharmony-net/actions/runs/44470831228)
+验证了提交 `8f659e4`。Windows 构建成功；Windows x64、Ubuntu x64、macOS arm64
+均通过 `ErBWs/setup-ohos@v2` 安装 CLI 6.1.1.280 / API24 SDK，并完成上述 workload
+安装、模板创建、双架构 HAP 发布、ELF 检查、卸载和恢复流程。
+
+三个平台上传的 `result.json` 均记录 `success: true`、SDK `10.0.301` 和 feature band
+`10.0.300`。六个 HAP 各含 13 个原生库，下载后再次核对 SHA-256 均与结果文件一致。
+下载证据位于 `artifacts/issue004-ci-results/{windows,ubuntu,macos}/`。
+
+首轮 CI 发现 `setup-dotnet` 的 `global-json-file` 会遵循 `latestFeature`，安装
+10.0.404，导致注册工具拒绝不匹配的 feature band。测试 job 已改为从 `global.json`
+读取精确 SDK 版本，通过 `dotnet-version` 安装，并在安装 HarmonyOS SDK 前检查版本。
+本次矩阵验证未执行设备安装运行，也未覆盖 macOS x64 runner。

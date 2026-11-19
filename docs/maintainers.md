@@ -115,7 +115,8 @@ HAP 输出至 `artifacts/sample/`。本机 SDK/Java 路径通过参数提供，�
 `src/`、`tests/`、`tools/` 和 `examples/` 中的改动直接提交到本仓库。
 统一的 CI 工作流位于 `.github/workflows/build.yml`，由 PR 或手动触发，push 不触发。
 `build` 在 Windows 执行托管构建、单元测试和工具打包，并上传 `workload-packages`。
-`test` 使用 Windows、Ubuntu、macOS 矩阵下载同一制品，安装独立的可写 .NET SDK、
+`test` 使用 Windows、Ubuntu、macOS 矩阵下载同一制品，按 `global.json` 中的精确版本
+安装独立的可写 .NET SDK（避免 `latestFeature` 切换到不匹配的 workload feature band）、
 JDK 17 和 `ErBWs/setup-ohos@v2` 提供的 HarmonyOS CLI 6.1.1.280；Ubuntu 额外安装
 `libgl1`。CLI 根目录由 action 的 `HOS_SDK_HOME` 推导，先通过 `hvigorw -v` 检查。
 每个平台从制品安装工具和 workload，实际执行 `dotnet new ohos`、build、两种 ABI 的
