@@ -10,6 +10,7 @@ jobs:
         shell: pwsh
     outputs:
       version: ${{ steps.version.outputs.value }}
+      sdk-version: ${{ steps.version.outputs.sdk }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -21,6 +22,7 @@ jobs:
           [xml]$props = Get-Content Directory.Build.props
           $version = $props.Project.PropertyGroup.OpenHarmonyPackageVersion.InnerText
           "value=$version" >> $env:GITHUB_OUTPUT
+          "sdk=$((Get-Content -Raw global.json | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT
           "WORKLOAD_VERSION=$version" >> $env:GITHUB_ENV
       - name: Build and test the unified solution
         run: ./build.ps1 -Target Test -Version $env:WORKLOAD_VERSION
@@ -66,7 +68,14 @@ jobs:
           path: artifacts/ci-packages
       - uses: actions/setup-dotnet@v4
         with:
-          global-json-file: global.json
+          # global-json-file honors latestFeature and can select a different
+          # feature band from the one embedded in the workload manifest.
+          dotnet-version: ${{ needs.build.outputs.sdk-version }}
+      - name: Verify the standalone SDK version
+        run: |
+          $expected = (Get-Content -Raw global.json | ConvertFrom-Json).sdk.version
+          $actual = dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $actual.Trim() -ne $expected) { throw "Expected SDK $expected, selected $actual." }
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
