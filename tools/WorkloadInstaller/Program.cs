@@ -18,7 +18,8 @@ public static class Program
                     harmonyos-workload --version
 
                     Registers the manifest embedded in this NuGet tool for a standalone
-                    Windows x64 .NET SDK. Defaults to the SDK selected by dotnet on PATH,
+                    .NET SDK on Windows x64, Linux x64 or macOS x64/arm64.
+                    Defaults to the SDK selected by dotnet on PATH,
                     honoring global.json. MSI-managed SDKs are not supported.
                     Install packs afterward with: dotnet workload install harmonyos --skip-manifest-update
                     Before changing versions or unregistering: dotnet workload uninstall harmonyos
@@ -41,9 +42,11 @@ public static class Program
                     throw new ArgumentException("Only --dotnet-root <directory> is accepted.");
                 root = Path.GetFullPath(args[2]);
             }
-            if (!OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
-                throw new InvalidOperationException("This workload currently requires a Windows x64 host.");
-            string host = root is null ? "dotnet" : Path.Combine(root, "dotnet.exe");
+            bool supported = (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()) && RuntimeInformation.ProcessArchitecture == Architecture.X64
+                || OperatingSystem.IsMacOS() && RuntimeInformation.ProcessArchitecture is Architecture.X64 or Architecture.Arm64;
+            if (!supported)
+                throw new InvalidOperationException("This workload requires Windows x64, Linux x64 or macOS x64/arm64.");
+            string host = root is null ? "dotnet" : Path.Combine(root, SdkInstallation.DotnetFileName);
             string version = Run(host, ["--version"]);
             SdkInstallation sdk = SdkInstallation.Discover(version, Run(host, ["--list-sdks"]), root);
             var registration = new ManifestRegistration(sdk, metadata["WorkloadFeatureBand"]);

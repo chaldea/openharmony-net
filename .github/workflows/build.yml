@@ -1,24 +1,101 @@
 name: Build and test
-on: [push, pull_request, workflow_dispatch]
+on: [pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
-  managed:
+  build:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      sdk-version: ${{ steps.version.outputs.sdk }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      - name: Resolve workload version
+        id: version
+        run: |
+          [xml]$props = Get-Content Directory.Build.props
+          $version = $props.Project.PropertyGroup.OpenHarmonyPackageVersion.InnerText
+          "value=$version" >> $env:GITHUB_OUTPUT
+          "sdk=$((Get-Content -Raw global.json | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT
+          "WORKLOAD_VERSION=$version" >> $env:GITHUB_ENV
       - name: Build and test the unified solution
-        shell: pwsh
-        run: ./build.ps1 -Target Test
+        run: ./build.ps1 -Target Test -Version $env:WORKLOAD_VERSION
       - name: Package managed and build tools
-        shell: pwsh
-        run: ./build.ps1 -Target PackTools
+        run: ./build.ps1 -Target PackTools -Version $env:WORKLOAD_VERSION
+      - name: Complete the workload feed with pinned native runtime packages
+        run: ./tools/prepare-ci-packages.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: packages-and-tests
-          path: |
-            artifacts/packages/*.nupkg
-            artifacts/test-results/*.trx
+          name: workload-packages
+          path: artifacts/ci-packages/*.nupkg
+          retention-days: 1
+          if-no-files-found: error
+
+  test:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      # Isolate file-based workload installation from preinstalled SDKs and MSI.
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-sdk
+      WORKLOAD_VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: workload-packages
+          path: artifacts/ci-packages
+      - uses: actions/setup-dotnet@v4
+        with:
+          # global-json-file honors latestFeature and can select a different
+          # feature band from the one embedded in the workload manifest.
+          dotnet-version: ${{ needs.build.outputs.sdk-version }}
+      - name: Verify the standalone SDK version
+        run: |
+          $expected = (Get-Content -Raw global.json | ConvertFrom-Json).sdk.version
+          $actual = dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $actual.Trim() -ne $expected) { throw "Expected SDK $expected, selected $actual." }
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Linux SDK dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1
+      - name: Setup HarmonyOS CLI tools
+        uses: ErBWs/setup-ohos@v2
+        with:
+          version: 6.1.1.280
+          cache: true
+      - name: Check the HarmonyOS toolchain
+        run: |
+          $cli = Split-Path $env:HOS_SDK_HOME -Parent
+          $native = Join-Path $cli 'sdk/default/openharmony/native'
+          if (!(Test-Path (Join-Path $native 'oh-uni-package.json'))) { throw 'HarmonyOS Native SDK is missing.' }
+          "OHOS_COMMAND_LINE_TOOLS=$cli" >> $env:GITHUB_ENV
+          hvigorw -v
+          if ($LASTEXITCODE -ne 0) { throw 'Hvigor is unavailable.' }
+      - name: Install workload, create an app and publish both HAP architectures
+        run: |
+          ./tools/verify-workload.ps1 -DotnetRoot $env:DOTNET_INSTALL_DIR `
+            -CommandLineTools $env:OHOS_COMMAND_LINE_TOOLS -JavaHome $env:JAVA_HOME `
+            -PackageSource ./artifacts/ci-packages -Version $env:WORKLOAD_VERSION

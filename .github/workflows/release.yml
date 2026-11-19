@@ -87,17 +87,8 @@ jobs:
         with:
           name: nuget-release
           path: artifacts/release/
+          retention-days: 1
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: release-validation
-          path: |
-            artifacts/test-results/*.trx
-            artifacts/wl-test/*/*.log
-            artifacts/wl-test/*/result.json
-            artifacts/nuget-name-check.json
-            artifacts/skia-validation/*/result.json
   publish:
     needs: build
     runs-on: ubuntu-latest

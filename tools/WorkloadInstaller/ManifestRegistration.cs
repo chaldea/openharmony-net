@@ -5,7 +5,9 @@ namespace Chaldea.OpenHarmony.Workload;
 
 public sealed record SdkInstallation(string Root, string Version, string FeatureBand)
 {
-    public string DotnetPath => Path.Combine(Root, "dotnet.exe");
+    public static string DotnetFileName => OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+    public string DotnetPath => Path.Combine(Root, DotnetFileName);
+    private static StringComparer PathComparer => OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     public static SdkInstallation Discover(string version, string sdkList, string? requestedRoot = null)
     {
@@ -16,10 +18,10 @@ public sealed record SdkInstallation(string Root, string Version, string Feature
         string[] locations = sdkList.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.StartsWith(prefix, StringComparison.Ordinal) && line.EndsWith(']'))
             .Select(line => Path.GetFullPath(Path.Combine(line[prefix.Length..^1], "..")))
-            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            .Distinct(PathComparer).ToArray();
         if (locations.Length != 1) throw new InvalidOperationException($"Cannot locate the selected SDK {version} in dotnet --list-sdks.");
         string root = locations[0];
-        if (requestedRoot is not null && !string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(requestedRoot)), root, StringComparison.OrdinalIgnoreCase))
+        if (requestedRoot is not null && !PathComparer.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(requestedRoot)), root))
             throw new InvalidOperationException("The selected SDK belongs to a different dotnet root. Check global.json and --dotnet-root.");
         return new(root, version, band);
     }
@@ -32,6 +34,7 @@ public sealed class ManifestRegistration(SdkInstallation sdk, string supportedFe
     private IEnumerable<string> MetadataRoots => new[]
     {
         Path.Combine(sdk.Root, "metadata", "workloads", "X64", sdk.FeatureBand),
+        Path.Combine(sdk.Root, "metadata", "workloads", "Arm64", sdk.FeatureBand),
         Path.Combine(sdk.Root, "metadata", "workloads", sdk.FeatureBand)
     };
     private bool IsInstalled => MetadataRoots.Any(root => File.Exists(Path.Combine(root, "InstalledWorkloads", "harmonyos")));

@@ -1,14 +1,17 @@
 # Chaldea.OpenHarmony.Sdk
 
-Installed by the `harmonyos` .NET workload on Windows x64. This package supplies
+Installed by the `harmonyos` .NET workload on Windows x64, Linux x64 and macOS
+x64/arm64. This package supplies
 MSBuild support for `net10.0-ohos`, a NativeAOT entry-point bridge, the Stage
 application shell, HAP packaging and device launch scripts. It is a workload SDK,
 not a `PackageReference` or an SDK name to put in the application's `Sdk` attribute.
 
 Install the bootstrap tool and workload, then create an application:
 
-Use a standalone Windows x64 .NET SDK 10.0.3xx on PATH; MSI-managed workload
-installations are not supported. The current packages are a preview release.
+Use a writable standalone .NET SDK 10.0.3xx on PATH; MSI-managed workload
+installations are not supported. Linux and macOS also need PowerShell 7 (`pwsh`)
+on PATH for HAP packaging. Install the HarmonyOS CLI tools for the host OS and
+architecture, and JDK 17+. The current packages are a preview release.
 
 ```powershell
 dotnet tool install -g Chaldea.OpenHarmony.Workload --prerelease

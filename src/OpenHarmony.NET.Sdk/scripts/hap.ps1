@@ -5,6 +5,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $settings = Get-Content -Raw -Encoding UTF8 -LiteralPath $SettingsPath | ConvertFrom-Json
+$onWindows = $env:OS -eq 'Windows_NT'
+$executableExtension = if ($onWindows) { '.exe' } else { '' }
+$scriptExtension = if ($onWindows) { '.bat' } else { '' }
 
 function Invoke-Tool {
     param([string]$Executable, [string[]]$Arguments)
@@ -28,7 +31,7 @@ if (!$settings.CommandLineTools) { throw 'Set OpenHarmonyCommandLineTools or OHO
 if (!$settings.JavaHome) { throw 'Set OpenHarmonyJavaHome or JAVA_HOME to a JDK 17+ directory.' }
 $cli = [IO.Path]::GetFullPath($settings.CommandLineTools)
 $toolchains = Join-Path $cli 'sdk/default/openharmony/toolchains'
-$java = Join-Path $settings.JavaHome 'bin/java.exe'
+$java = Join-Path $settings.JavaHome "bin/java$executableExtension"
 Require-File $java 'Set OpenHarmonyJavaHome or JAVA_HOME to a JDK 17+ directory.'
 $oldJava = $env:JAVA_HOME
 $oldSdk = $env:DEVECO_SDK_HOME
@@ -36,10 +39,11 @@ $oldPath = $env:PATH
 try {
     $env:JAVA_HOME = $settings.JavaHome
     $env:DEVECO_SDK_HOME = Join-Path $cli 'sdk'
-    $env:PATH = "$(Join-Path $cli 'tool/node');$(Join-Path $settings.JavaHome 'bin');$env:PATH"
+    $nodeDirectory = if ($onWindows) { 'tool/node' } else { 'tool/node/bin' }
+    $env:PATH = @((Join-Path $cli $nodeDirectory), (Join-Path $settings.JavaHome 'bin'), $env:PATH) -join [IO.Path]::PathSeparator
     if ($Action -eq 'Package') {
-        $ohpm = Join-Path $cli 'bin/ohpm.bat'
-        $hvigor = Join-Path $cli 'bin/hvigorw.bat'
+        $ohpm = Join-Path $cli "bin/ohpm$scriptExtension"
+        $hvigor = Join-Path $cli "bin/hvigorw$scriptExtension"
         Require-File $ohpm 'Install the official HarmonyOS command-line tools.'
         Require-File $hvigor 'Install the official HarmonyOS command-line tools.'
         $stage = Join-Path $settings.WorkDirectory 'Stage'
@@ -75,7 +79,7 @@ try {
         Write-Host "OpenHarmony HAP: $($settings.HapPath)"
     }
     else {
-        $hdc = Join-Path $toolchains 'hdc.exe'
+        $hdc = Join-Path $toolchains "hdc$executableExtension"
         Require-File $hdc 'Install the HarmonyOS toolchains component.'
         $targets = @((Invoke-Tool $hdc @('list','targets')) -split '\r?\n' | ForEach-Object { $_.Trim() } |
             Where-Object { $_ -and $_ -ne '[Empty]' })

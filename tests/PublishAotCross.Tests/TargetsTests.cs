@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Security;
 using Xunit;
 
 namespace PublishAotCross.Tests;
@@ -58,7 +60,7 @@ public sealed class TargetsTests
 
         Assert.Contains("Name=\"ConfigureOpenHarmonyToolchain\"", targets);
         Assert.Contains("BeforeTargets=\"SetupOSSpecificProps\"", targets);
-        Assert.Contains("PrependPath Value=\"$(OpenHarmonyNativeRoot)\\llvm\\bin\"", targets);
+        Assert.Contains("PrependPath Value=\"$(OpenHarmonyNativeRoot)/llvm/bin\"", targets);
         Assert.Contains("<CppLinker>clang++</CppLinker>", targets);
         Assert.Contains("<CompressSymbols>false</CompressSymbols>", targets);
         Assert.Contains("<NetCoreAppNativeLibrary Remove=\"System.Net.Security.Native\" />", targets);
@@ -102,5 +104,64 @@ public sealed class TargetsTests
         Assert.Contains("net10.0", project);
         Assert.Contains("OpenHarmony.NET.PublishAotCross.targets", project);
         Assert.Contains("PublishAotCross.Tests/**", project);
+    }
+
+    [Theory]
+    [InlineData("x86_64", "linux-musl-x64", "x86_64-linux-ohos")]
+    [InlineData("arm64-v8a", "linux-musl-arm64", "aarch64-linux-ohos")]
+    public async Task ToolchainTargetsSelectTheOhosLinkerWithoutLegacyLinuxLibraries(string abi, string rid, string triple)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "ohos-targets-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string project = Path.Combine(root, "probe.proj");
+            string output = Path.Combine(root, "linker.txt");
+            string targets = Path.Combine(RepositoryRoot, "package", "Crosscompile.targets");
+            string native = SecurityElement.Escape(root)!;
+            File.WriteAllText(project, $$"""
+                <Project>
+                  <PropertyGroup>
+                    <OpenHarmonyTarget>true</OpenHarmonyTarget>
+                    <RuntimeIdentifier>{{rid}}</RuntimeIdentifier>
+                    <OpenHarmonyAbi>{{abi}}</OpenHarmonyAbi>
+                    <OpenHarmonyNativeRoot>{{native}}</OpenHarmonyNativeRoot>
+                    <OpenHarmonyClangXX>{{native}}/llvm/bin/clang++</OpenHarmonyClangXX>
+                    <OpenHarmonySysroot>{{native}}/sysroot</OpenHarmonySysroot>
+                  </PropertyGroup>
+                  <Import Project="{{SecurityElement.Escape(targets)}}" />
+                  <PropertyGroup>
+                    <!-- A real executable for the macOS version probe, without requiring an NDK. -->
+                    <OpenHarmonyLinker>$(MSBuildBinPath)/../../dotnet$(OpenHarmonyExecutableExtension)</OpenHarmonyLinker>
+                  </PropertyGroup>
+                  <!-- Isolate target ordering and linker arguments from SDK discovery. -->
+                  <Target Name="ValidateOpenHarmonyResolvedSdk" />
+                  <Target Name="SetupOSSpecificProps" />
+                  <Target Name="Probe" DependsOnTargets="SetupOSSpecificProps">
+                    <WriteLinesToFile File="{{SecurityElement.Escape(output)}}" Overwrite="true"
+                      Lines="$(TargetTriple);$(CppLinker);@(LinkerArg)" />
+                  </Target>
+                </Project>
+                """);
+            var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
+            {
+                RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false
+            };
+            foreach (string argument in new[] { "msbuild", project, "-t:Probe", "-nologo", "-v:minimal" })
+                start.ArgumentList.Add(argument);
+            using var process = Process.Start(start)!;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            try { await process.WaitForExitAsync(timeout.Token); }
+            finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+            Assert.True(process.ExitCode == 0, await stdout + await stderr);
+            string[] lines = File.ReadAllLines(output);
+            Assert.Equal(triple, lines[0]);
+            Assert.Equal(root + "/llvm/bin/clang++", lines[1]);
+            Assert.Contains("--target=" + triple, lines);
+            Assert.DoesNotContain(lines, line => line.Contains("-linux-musl") || line.Contains("-linux-gnu") || line.Contains("libs/"));
+        }
+        finally { Directory.Delete(root, recursive: true); }
     }
 }

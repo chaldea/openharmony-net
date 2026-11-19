@@ -68,8 +68,10 @@ SDK feature band 固定为当前验证的 `10.0.300`；发布其它 band 前需�
 5. `prepare-release.ps1` 检查全部包的 ID、版本、仓库、内部依赖、manifest、runtime provenance；
    同时验证图形库两种 ABI 的 ELF、哈希、固定源码 revision、托管 API 版本及许可证文件。
    只把 catalog 中的十二个包复制到空的 release 目录，生成 SHA256SUMS。
-6. 上传审阅制品与验证日志；publish job 验证 SHA-256，按 pack → manifest → bootstrap tool
-   顺序调用 `dotnet nuget push --source ... --api-key ... --skip-duplicate`。
+6. 上传供 publish job 消费的 `nuget-release`，保留 1 天；不额外上传验证日志或测试报告。
+   publish job 验证 SHA-256，按 pack → manifest → bootstrap tool 顺序调用
+   `dotnet nuget push --source ... --api-key ... --skip-duplicate`。超过保留期后需重新构建，
+   才能重跑 publish job。`publish-prepared.yml` 直接读取 Release 附件，没有 Actions 制品上传。
 
 `--skip-duplicate` 允许部分成功后的重试，不会替换 NuGet 上已有同版本包。发布版本不可
 原地修改；代码变更应使用新版本。NuGet 索引更新可能有延迟，工作流结束后应分别记录

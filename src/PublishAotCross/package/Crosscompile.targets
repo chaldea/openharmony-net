@@ -5,6 +5,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<OpenHarmonyExecutableExtension Condition="'$(OS)' == 'Windows_NT'">.exe</OpenHarmonyExecutableExtension>
 		<OpenHarmonyApiLevel Condition="'$(OpenHarmonyApiLevel)' == ''">15</OpenHarmonyApiLevel>
 		<OpenHarmonySdkRoot Condition="'$(OpenHarmonySdkRoot)' == ''">$(OHOS_SDK_ROOT)</OpenHarmonySdkRoot>
 		<OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == '' and $(RuntimeIdentifier.EndsWith('-arm64'))">arm64-v8a</OpenHarmonyAbi>
@@ -26,8 +27,8 @@
         <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Linux')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'x64'">linux-x64</HostRuntimeIdentifier>
         <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('Linux')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'arm64'">linux-arm64</HostRuntimeIdentifier>
 
-        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('macOS')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'x64'">osx-x64</HostRuntimeIdentifier>
-        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('macOS')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'arm64'">osx-arm64</HostRuntimeIdentifier>
+        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('OSX')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'x64'">osx-x64</HostRuntimeIdentifier>
+        <HostRuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('OSX')) and $([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)== 'arm64'">osx-arm64</HostRuntimeIdentifier>
     </PropertyGroup>
 
 
@@ -69,12 +70,23 @@
 			Condition="'$(OpenHarmonyTarget)' == 'true'">
 		<!-- .NET 10 probes CppLinker inside SetupOSSpecificProps, so the SDK
 		     compiler must be selected before that target starts. -->
-		<PrependPath Value="$(OpenHarmonyNativeRoot)\llvm\bin" />
+		<PrependPath Value="$(OpenHarmonyNativeRoot)/llvm/bin" />
+		<!-- Query the ELF linker directly on macOS; the upstream clang probe
+		     otherwise selects the host's Mach-O linker. NativeAOT uses this
+		     version to select its section-preservation linker script. -->
+		<Exec Command="&quot;$(OpenHarmonyLinker)&quot; --version"
+			  Condition="$([MSBuild]::IsOSPlatform('OSX'))"
+			  StandardOutputImportance="Low" ConsoleToMSBuild="true">
+			<Output TaskParameter="ConsoleOutput" PropertyName="_LinkerVersionString" />
+		</Exec>
 		<PropertyGroup>
 			<CppCompilerAndLinker>clang++</CppCompilerAndLinker>
 			<CppCompilerAndLinkerAlternative />
 			<CppLinker>clang++</CppLinker>
 			<LinkerFlavor>lld</LinkerFlavor>
+			<!-- The upstream version probe omits the target triple and would invoke the
+			     Mach-O linker on macOS. Select ELF lld explicitly after setup. -->
+			<LinkerFlavor Condition="$([MSBuild]::IsOSPlatform('OSX'))" />
 			<CompressSymbols>false</CompressSymbols>
 		</PropertyGroup>
 	</Target>
@@ -121,9 +133,9 @@
 
 		<PropertyGroup>
 			<OpenHarmonySysroot>$(OpenHarmonyNativeRoot)\sysroot</OpenHarmonySysroot>
-			<OpenHarmonyClang>$(OpenHarmonyNativeRoot)\llvm\bin\clang.exe</OpenHarmonyClang>
-			<OpenHarmonyClangXX>$(OpenHarmonyNativeRoot)\llvm\bin\clang++.exe</OpenHarmonyClangXX>
-			<OpenHarmonyLinker>$(OpenHarmonyNativeRoot)\llvm\bin\ld.lld.exe</OpenHarmonyLinker>
+			<OpenHarmonyClang>$(OpenHarmonyNativeRoot)/llvm/bin/clang$(OpenHarmonyExecutableExtension)</OpenHarmonyClang>
+			<OpenHarmonyClangXX>$(OpenHarmonyNativeRoot)/llvm/bin/clang++$(OpenHarmonyExecutableExtension)</OpenHarmonyClangXX>
+			<OpenHarmonyLinker>$(OpenHarmonyNativeRoot)/llvm/bin/ld.lld$(OpenHarmonyExecutableExtension)</OpenHarmonyLinker>
 		</PropertyGroup>
 		<Message Text="Resolved OpenHarmony API $(OpenHarmonyApiLevel) from $(OpenHarmonySdkFolder) (manifest SHA-256 $(OpenHarmonySdkManifestSha256))."
 				 Importance="High" />
@@ -147,7 +159,8 @@
 	<!-- BEGIN: Works around ILCompiler targets not detecting this as a cross compilation -->
 	<Target Name="OverwriteTargetTriple"
 			AfterTargets="SetupOSSpecificProps"
-			BeforeTargets="LinkNative">
+			BeforeTargets="LinkNative"
+			Condition="'$(OpenHarmonyTarget)' != 'true'">
 
 		<PropertyGroup>
 			<CrossCompileRid />
@@ -193,6 +206,7 @@
 			<DirectPInvoke Remove="System.Net.Security.Native" />
 			<NativeLibrary Remove="$(IlcFrameworkNativePath)libSystem.Net.Security.Native.a" />
 			<LinkerArg Include="--target=$(OpenHarmonyTargetTriple)" />
+			<LinkerArg Include="-fuse-ld=lld" Condition="$([MSBuild]::IsOSPlatform('OSX'))" />
 			<LinkerArg Include="--sysroot=&quot;$(OpenHarmonySysroot)&quot;" />
 			<LinkerArg Include="-L&quot;$(OpenHarmonySysroot)/usr/lib&quot;" />
 			<LinkerArg Include="-L&quot;$(OpenHarmonySysroot)/usr/lib/$(OpenHarmonyTargetTriple)&quot;" />
