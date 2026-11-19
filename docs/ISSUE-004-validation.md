@@ -11,7 +11,9 @@ SHA-256 校验的两个已发布原生运行时包，上传完整的 `workload-p
 `test` job 在 `windows-latest`、`ubuntu-latest`、`macos-latest` 上分别下载同一制品，
 使用独立 .NET SDK 和 NuGet 缓存安装 workload，创建模板工程，并发布 x86_64、
 arm64-v8a HAP。检查包含的原生库和 ELF 架构后，继续验证卸载及恢复。
-三个 job 独立保存 HAP、日志和结果，任一失败不会取消其他平台。
+三个 job 在各自 runner 上生成 HAP、日志和结果，任一失败不会取消其他平台。
+CI 只上传供测试消费的 `workload-packages`，保留 1 天；测试结果和 HAP 哈希写入 job
+日志，不再回传 HAP 或测试报告。发布工作流的 `nuget-release` 同样仅保留 1 天。
 
 安装器、manifest、SDK targets 和 PowerShell 脚本已适配 Windows x64、Linux x64、
 macOS x64/arm64，包括可执行文件后缀、PATH 分隔符、Node 目录、Arm64 安装记录和
@@ -44,9 +46,15 @@ macOS 的 ELF 链接器探测。HarmonyOS 使用官方 SDK 自带的 LLVM 工具
 均通过 `ErBWs/setup-ohos@v2` 安装 CLI 6.1.1.280 / API24 SDK，并完成上述 workload
 安装、模板创建、双架构 HAP 发布、ELF 检查、卸载和恢复流程。
 
-三个平台上传的 `result.json` 均记录 `success: true`、SDK `10.0.301` 和 feature band
+该次历史运行中三个平台上传的 `result.json` 均记录 `success: true`、SDK `10.0.301` 和 feature band
 `10.0.300`。六个 HAP 各含 13 个原生库，下载后再次核对 SHA-256 均与结果文件一致。
 下载证据位于 `artifacts/issue004-ci-results/{windows,ubuntu,macos}/`。
+后续运行改为在 job 日志中保留验证结果，不再上传这些测试制品。
+
+历史成功日志中的 `OHOS1001`、非法 ABI 和 `NETSDK1147` 来自预期失败测试。
+脚本同时检查非零退出码和指定诊断内容；现在匹配成功后只打印 `PASS: negative test`，
+避免 GitHub 将预期诊断标为 ERROR。未出现预期失败、诊断不匹配或正常命令失败时，
+仍输出原始日志并使 job 失败。
 
 首轮 CI 发现 `setup-dotnet` 的 `global-json-file` 会遵循 `latestFeature`，安装
 10.0.404，导致注册工具拒绝不匹配的 feature band。测试 job 已改为从 `global.json`

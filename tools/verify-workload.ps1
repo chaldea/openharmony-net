@@ -36,7 +36,8 @@ $installed = $false
 function Invoke-Dotnet {
     param([string]$Name, [string[]]$Arguments, [string]$ExpectedFailure)
     $log = Join-Path $runRoot "$Name.log"
-    Write-Host "Verify: dotnet $($Arguments -join ' ')"
+    if ($ExpectedFailure) { Write-Host "Verify negative test '$Name' (command must fail with the expected diagnostic)." }
+    else { Write-Host "Verify: dotnet $($Arguments -join ' ')" }
     $previous = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
@@ -45,11 +46,18 @@ function Invoke-Dotnet {
     }
     finally { $ErrorActionPreference = $previous }
     $text = Get-Content -Raw -Encoding UTF8 $log
-    if ($code -ne 0) { Write-Host $text }
     if ($ExpectedFailure) {
-        if ($code -eq 0 -or $text -notmatch $ExpectedFailure) { throw "Expected failure '$ExpectedFailure' was not observed. See $log" }
+        if ($code -eq 0 -or $text -notmatch $ExpectedFailure) {
+            Write-Host $text
+            throw "Expected failure '$ExpectedFailure' was not observed. See $log"
+        }
+        # Do not feed expected compiler errors into GitHub's problem matcher.
+        Write-Host "PASS: negative test '$Name' observed the expected diagnostic (exit code $code)."
     }
-    elseif ($code -ne 0) { throw "dotnet exited with $code. See $log" }
+    elseif ($code -ne 0) {
+        Write-Host $text
+        throw "dotnet exited with $code. See $log"
+    }
 }
 
 function Assert-Hap {
@@ -149,7 +157,10 @@ try {
     Invoke-Dotnet 'build-restored' @('build',$project)
     $result = @{ sdk = $sdkVersion; featureBand = $featureBand; version = $Version; packageSource = $PackageSource;
         x64 = $x64; arm64 = $arm64; device = $deviceResult; success = $true }
-    $result | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $runRoot 'result.json')
+    $resultJson = $result | ConvertTo-Json -Depth 6
+    $resultJson | Set-Content (Join-Path $runRoot 'result.json')
+    # CI retains the verification result in the job log; no HAP/log artifact is needed.
+    Write-Host $resultJson
     Write-Host "Workload verification passed. Evidence: $runRoot"
 }
 finally {

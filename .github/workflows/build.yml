@@ -34,13 +34,8 @@ jobs:
         with:
           name: workload-packages
           path: artifacts/ci-packages/*.nupkg
+          retention-days: 1
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: managed-test-results
-          path: artifacts/test-results/*.trx
-          if-no-files-found: warn
 
   test:
     needs: build
@@ -104,12 +99,3 @@ jobs:
           ./tools/verify-workload.ps1 -DotnetRoot $env:DOTNET_INSTALL_DIR `
             -CommandLineTools $env:OHOS_COMMAND_LINE_TOOLS -JavaHome $env:JAVA_HOME `
             -PackageSource ./artifacts/ci-packages -Version $env:WORKLOAD_VERSION
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: workload-validation-${{ matrix.os }}
-          path: |
-            artifacts/wl-test/*/*.log
-            artifacts/wl-test/*/result.json
-            artifacts/wl-test/*/app/bin/Release/net10.0-ohos/*/publish/*.hap
-          if-no-files-found: warn
