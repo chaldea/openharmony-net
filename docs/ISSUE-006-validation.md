@@ -10,7 +10,7 @@ SkiaSharp 4.157.0 和配套 HarfBuzzSharp 14.4.0.200。
 | --- | --- |
 | `dotnet/core-origin` | 更新至 `33918e8a`；`release-notes/11.0/releases.json` 确认 2026-11-10 发布 .NET 11.0.0 / SDK 11.0.100 |
 | `dotnet/runtime-origin` | 更新至正式版 tag `v11.0.0`：`deae2e32bf0e018e09d64597b7c59b62b73bb3ce` |
-| `dotnet/runtime` | 以相同正式版提交为基线，迁入原来的 15 个 OpenHarmony 提交；最终提交 `9674bea1fd5eedfeea1abc039a7315e43f40ed68`，远端分支 `codex/net11-openharmony` |
+| `dotnet/runtime` | 以相同正式版提交为基线，迁入原来的 15 个 OpenHarmony 提交，并将构建 SDK 固定为正式版；最终提交 `4801b7527a2618c2515bbf31d7ba63d68d14a777`，远端分支 `codex/net11-openharmony` |
 | `dotnet/SkiaSharp` | 更新至最新稳定版 tag `v4.157.0`：`2a53a3c8641073bc914c63ee158bbf62b8a0bb92` |
 | Skia 内嵌子模块 | `51cb594d773b5383a45065ea3c8cbec398ad2c36`，由 SkiaSharp tag 固定 |
 | `dotnet/ClangSharp` | 保持 `dbfa51b734a00bd259dc6c197a68818bea5bcc26`；它不参与 runtime / workload 编译，绑定生成使用独立工具清单，升级 .NET 不要求改变 Clang ABI |
@@ -60,15 +60,18 @@ CrossCompileHello 的进程内命名互斥量。
 
 ## 验证记录
 
-验证日期：2026-11-19，Windows x64 主机。应用与工具使用 SDK 11.0.100；runtime
-按其上游 `global.json` 引导 SDK 11.0.100-rc.1.26425.128，编译正式版 v11.0.0 源码。
-runtime 子模块保持干净，两个 ABI 的构建 provenance 均对应上述最终提交。
+首次验证日期：2026-11-19，Windows x64 主机。应用与工具使用 SDK 11.0.100；runtime
+当时按上游 `global.json` 引导 SDK 11.0.100-rc.1.26425.128，编译正式版 v11.0.0 源码。
+该轮 runtime provenance 对应 `9674bea1fd5eedfeea1abc039a7315e43f40ed68`。
+2026-11-20 的 CI SDK 修正与重新验证记录见下文。
 
 | 验证项 | 结果与证据（相对仓库根目录） |
 | --- | --- |
 | 主解决方案 | 77 通过、0 失败；`artifacts/issue006-tests-final.log` |
 | runtime PowerShell 测试 | 88 通过、0 失败、5 跳过；跳过项依赖未构建的 API15 fixture，API13 实际制品另行验证；`artifacts/issue006-runtime-tests.log` |
 | API13 NativeAOT runtime | x64 / arm64 均完整构建成功；`artifacts/issue006-runtime-build.log` |
+| 稳定 SDK runtime 回归 | runtime `global.json` 的 `sdk.version` 与 `tools.dotnet` 均为 11.0.100；显式/自动 SDK 选择、路径含空格、缺失 SDK 和旧 RC 配置检查通过；`artifacts/issue006-sdk-preflight-tests.log` |
+| 稳定 SDK NativeAOT | 使用 SDK 11.0.100 重新构建 API13 x64 / arm64；两个 ABI 的 12 个 AOT 输入、11 个原生库、479 个托管文件校验通过；`artifacts/issue006-runtime-stable-verify-x64.log`、`artifacts/issue006-runtime-stable-verify-arm64.log` |
 | runtime 实际制品检查 | 两个 ABI 各 12 个 AOT ELF 输入、11 个原生库、479 个托管文件；源码、架构、符号、依赖和无 RPATH 检查通过；`artifacts/issue006-pack-verify.log` |
 | SkiaSharp / HarfBuzz | 两个 ABI 均由固定源码重新编译；`artifacts/issue006-skia-build.log`，`artifacts/native/skia/<ABI>/manifest.json` |
 | 全部制品 | 12 个 nupkg；最终内容、依赖闭包和哈希校验通过；`artifacts/issue006-release-final/`（含 `SHA256SUMS`） |

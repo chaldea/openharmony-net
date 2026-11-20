@@ -61,6 +61,9 @@ API 13 用于运行时兼容基线；ICU/OpenSSL 依赖按现有移植约定使�
 完整流程不会以仓库里的旧 .NET 9 二进制代替 .NET 11 构建。
 
 ```powershell
+# 提前检查主仓库、runtime 的 SDK 配置及已安装的正式版 SDK。
+pwsh ./tools/resolve-runtime-sdk.ps1
+
 # 下载官方 Native SDK，校验服务端公布的 SHA-256 后解压到本地 artifacts。
 ./tools/install-native-sdk.ps1
 
@@ -85,7 +88,12 @@ pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
 已有 API 13/15 的 SDK 根目录可以通过 `-SdkRoot` 直接传入。构建产物存于
 `artifacts/native/runtime/api13/<arch>/Release/`；运行时打包目录为
 `artifacts/runtime/releases/<version>/`。`Pack` 在运行时输入缺失或 provenance
-校验失败时直接报错。运行时源码构建会按 `dotnet/runtime/global.json` 获取其所需 SDK。
+校验失败时直接报错。运行时源码构建要求已安装 SDK 11.0.100，默认复用 PATH 中的
+`dotnet`（优先使用 `artifacts/dotnet-sdk11` 中符合版本的本机安装）；也可通过
+`-RuntimeDotnetRoot <安装目录>` 指定。`resolve-runtime-sdk.ps1` 在编译前检查主仓库
+`sdk.version` 与 runtime 的 `sdk.version`、`tools.dotnet` 一致，并执行 runtime 目录下的
+`dotnet --version`。CI 在准备原生依赖前执行相同检查，再通过 `DOTNET_INSTALL_DIR`
+将正式 SDK 传给 Arcade，避免重复下载引导 SDK。
 
 ## 底层示例与源码调试
 

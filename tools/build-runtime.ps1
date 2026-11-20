@@ -8,7 +8,7 @@ param(
 )
 . (Join-Path $PSScriptRoot 'common.ps1')
 if (!$DependencyRoot) { $DependencyRoot = Join-Path $RepoRoot 'artifacts/native/dependencies' }
-if (!$RuntimeDotnetRoot) { $RuntimeDotnetRoot = Join-Path $RepoRoot 'dotnet/runtime/.dotnet' }
+$RuntimeDotnetRoot = & (Join-Path $PSScriptRoot 'resolve-runtime-sdk.ps1') -DotnetRoot $RuntimeDotnetRoot
 $oldDotnet = $env:DOTNET_INSTALL_DIR
 try {
     $env:DOTNET_INSTALL_DIR = [IO.Path]::GetFullPath($RuntimeDotnetRoot)

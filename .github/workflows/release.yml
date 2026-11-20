@@ -19,6 +19,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64, harmonyos]
     timeout-minutes: 720
     env:
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/build-sdk
       # Recursive checkout needs long paths without changing runner-wide config.
       GIT_CONFIG_COUNT: '1'
       GIT_CONFIG_KEY_0: core.longpaths
@@ -34,6 +35,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      - name: Check runtime sources and the stable build SDK
+        run: ./tools/resolve-runtime-sdk.ps1
       - name: Resolve release version
         id: version
         env:
