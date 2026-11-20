@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <IsPackable>true</IsPackable>
     <PackageId>Chaldea.OpenHarmony.NDK.Bindings</PackageId>
     <Authors>OpenHarmony.NET</Authors>
-    <Description>OpenHarmony Native SDK bindings for .NET 10.</Description>
+    <Description>OpenHarmony Native SDK bindings for .NET 11.</Description>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

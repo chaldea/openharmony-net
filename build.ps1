@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Build','Test','PackTools','Pack')][string]$Target = 'Test',
+    [ValidateSet('Build','Test','PackTools','PackRuntime','Pack')][string]$Target = 'Test',
     [ValidateSet('Debug','Release')][string]$Configuration = 'Release',
-    [string]$Version = '10.0.10-ohos.2-preview.1',
+    [string]$Version = '11.0.0-ohos.1-preview.1',
     [string]$RuntimeArtifacts,
     [string]$SdkCatalog
 )
@@ -41,6 +41,8 @@ try {
         foreach ($project in @('SkiaSharp.NativeAssets.HarmonyOS','HarfBuzzSharp.NativeAssets.HarmonyOS')) {
             Invoke-Checked dotnet (@('pack',"src/$project/$project.csproj",'-c',$Configuration,'--no-build','--nologo') + $properties)
         }
+    }
+    if ($Target -in @('PackRuntime','Pack')) {
         if (!$RuntimeArtifacts) { $RuntimeArtifacts = Join-Path $RepoRoot 'artifacts/native/runtime' }
         if (!$SdkCatalog) { $SdkCatalog = Join-Path $RepoRoot 'dotnet/runtime/eng/openharmony/sdk-catalog.json' }
         $runtimeCommit = (& git -C dotnet/runtime rev-parse HEAD).Trim()

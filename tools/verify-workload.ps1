@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory=$true)][string]$CommandLineTools,
     [Parameter(Mandatory=$true)][string]$JavaHome,
     [string]$PackageSource,
-    [string]$Version = '10.0.10-ohos.2-preview.1',
+    [string]$Version = '11.0.0-ohos.1-preview.1',
     [string]$Device = '127.0.0.1:5555',
     [switch]$RunOnDevice,
     [switch]$KeepInstalled
@@ -17,8 +17,8 @@ $dotnet = Join-Path $DotnetRoot "dotnet$executableExtension"
 if (!$PackageSource) { $PackageSource = Join-Path $repository 'artifacts/packages' }
 if ($PackageSource -notmatch '^https?://') { $PackageSource = [IO.Path]::GetFullPath($PackageSource) }
 $sdkVersion = (& $dotnet --version).Trim()
-if ($LASTEXITCODE -ne 0 -or $sdkVersion -notmatch '^10\.0\.(\d+)$') { throw 'Select a .NET 10 SDK.' }
-$featureBand = '10.0.' + ([int][Math]::Floor([int]$Matches[1] / 100) * 100)
+if ($LASTEXITCODE -ne 0 -or $sdkVersion -notmatch '^11\.0\.(\d+)$') { throw 'Select a .NET 11 SDK.' }
+$featureBand = '11.0.' + ([int][Math]::Floor([int]$Matches[1] / 100) * 100)
 $records = @((Join-Path $DotnetRoot "metadata/workloads/X64/$featureBand/InstalledWorkloads/harmonyos"),
     (Join-Path $DotnetRoot "metadata/workloads/Arm64/$featureBand/InstalledWorkloads/harmonyos"),
     (Join-Path $DotnetRoot "metadata/workloads/$featureBand/InstalledWorkloads/harmonyos"))
@@ -28,7 +28,7 @@ New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
 $projectRoot = Join-Path $runRoot 'app'
 $project = Join-Path $projectRoot 'WorkloadSmoke.csproj'
 $oldEnvironment = @{}
-foreach ($name in @('PATH','DOTNET_ROOT','DOTNET_ROOT_X64','DOTNET_ROOT_ARM64','NUGET_PACKAGES','OHOS_COMMAND_LINE_TOOLS','OHOS_SDK_ROOT','JAVA_HOME','DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE')) {
+foreach ($name in @('PATH','DOTNET_ROOT','DOTNET_ROOT_X64','DOTNET_ROOT_ARM64','NUGET_PACKAGES','OHOS_COMMAND_LINE_TOOLS','OHOS_SDK_ROOT','JAVA_HOME','DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE','MSBUILDDISABLENODEREUSE')) {
     $oldEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 $installed = $false
@@ -62,7 +62,7 @@ function Invoke-Dotnet {
 
 function Assert-Hap {
     param([string]$Abi, [string]$Rid, [int]$Machine)
-    $hap = Join-Path $projectRoot "bin/Release/net10.0-ohos/$Rid/publish/WorkloadSmoke-unsigned.hap"
+    $hap = Join-Path $projectRoot "bin/Release/net11.0-ohos/$Rid/publish/WorkloadSmoke-unsigned.hap"
     if (!(Test-Path -LiteralPath $hap)) { throw "HAP missing: $hap" }
     $zip = [IO.Compression.ZipFile]::OpenRead($hap)
     try {
@@ -103,6 +103,9 @@ try {
     $env:OHOS_SDK_ROOT = $null
     $env:JAVA_HOME = $JavaHome
     $env:DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE = 'true'
+    # Reused MSBuild nodes can retain the workload task DLL on Windows and
+    # prevent the install/uninstall lifecycle from removing the SDK pack.
+    $env:MSBUILDDISABLENODEREUSE = '1'
     # Stop repository-level MSBuild settings and package sources from leaking in.
     [IO.File]::WriteAllText((Join-Path $runRoot 'Directory.Build.props'), '<Project />')
     [IO.File]::WriteAllText((Join-Path $runRoot 'Directory.Build.targets'), '<Project />')
@@ -114,7 +117,7 @@ try {
     & (Join-Path $toolPath "harmonyos-workload$executableExtension") --version > (Join-Path $runRoot 'tool-command.log')
     if ($LASTEXITCODE -ne 0) { throw 'The installed dotnet tool command failed.' }
     # Invoke the installed tool through its SDK host, so no system .NET runtime is needed.
-    $toolDll = Join-Path $toolPath ".store/chaldea.openharmony.workload/$Version/chaldea.openharmony.workload/$Version/tools/net10.0/any/WorkloadInstaller.dll"
+    $toolDll = Join-Path $toolPath ".store/chaldea.openharmony.workload/$Version/chaldea.openharmony.workload/$Version/tools/net11.0/any/WorkloadInstaller.dll"
     Invoke-Dotnet 'tool-init' @($toolDll,'init','--dotnet-root',$DotnetRoot)
     Invoke-Dotnet 'tool-init-repeat' @($toolDll,'init','--dotnet-root',$DotnetRoot)
     Invoke-Dotnet 'install' @('workload','install','harmonyos','--source',$PackageSource,'--skip-manifest-update')
@@ -139,12 +142,12 @@ try {
             $appPid = (& $hdc -t $Device shell pidof org.openharmony.dotnet.workloadsmoke | Out-String).Trim()
             $log = ''
             if ($appPid -match '^\d+$') { $log = (& $hdc -t $Device shell hilog -x -T DotNetOhos -P $appPid | Out-String) }
-            if ($log -match 'DOTNET_OHOS result=42 runtime=10 runs=1') { break }
+            if ($log -match 'DOTNET_OHOS result=42 runtime=11 runs=1') { break }
             Start-Sleep -Seconds 2
         } while ((Get-Date) -lt $deadline)
         $log | Set-Content (Join-Path $runRoot 'hilog.log')
-        if ($log -notmatch 'DOTNET_OHOS result=42 runtime=10 runs=1') { throw 'The installed application did not execute .NET 10 successfully.' }
-        $deviceResult = @{ target = $Device; runtimeMajor = 10; result = 42 }
+        if ($log -notmatch 'DOTNET_OHOS result=42 runtime=11 runs=1') { throw 'The installed application did not execute .NET 11 successfully.' }
+        $deviceResult = @{ target = $Device; runtimeMajor = 11; result = 42 }
     }
     Invoke-Dotnet 'uninstall' @('workload','uninstall','harmonyos')
     $installed = $false
@@ -165,7 +168,9 @@ try {
 }
 finally {
     try {
-        if ($installed -and !$KeepInstalled) { Invoke-Dotnet 'cleanup-uninstall' @('workload','uninstall','harmonyos') }
+        if ($installed -and !$KeepInstalled -and (Test-Path -LiteralPath $records) -contains $true) {
+            Invoke-Dotnet 'cleanup-uninstall' @('workload','uninstall','harmonyos')
+        }
     }
     finally {
         foreach ($name in $oldEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $oldEnvironment[$name], 'Process') }

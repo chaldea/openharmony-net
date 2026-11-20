@@ -3,5 +3,5 @@
     <SdkSupportedTargetPlatformIdentifier Include="ohos" DisplayName="OpenHarmony" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Chaldea.OpenHarmony.Sdk"
-          Condition="'$(TargetPlatformIdentifier)' == 'ohos' and $([MSBuild]::VersionEquals('$(TargetFrameworkVersion)', '10.0'))" />
+          Condition="'$(TargetPlatformIdentifier)' == 'ohos' and $([MSBuild]::VersionEquals('$(TargetFrameworkVersion)', '11.0'))" />
 </Project>

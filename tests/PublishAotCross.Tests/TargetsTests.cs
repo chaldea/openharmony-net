@@ -97,11 +97,11 @@ public sealed class TargetsTests
     }
 
     [Fact]
-    public void HelloProjectTargetsDotNet10AndOpenHarmonyProperties()
+    public void HelloProjectTargetsDotNet11AndOpenHarmonyProperties()
     {
         var project = File.ReadAllText(Path.Combine(RepositoryRoot, "..", "..", "examples", "CrossCompileHello", "Hello.csproj"));
 
-        Assert.Contains("net10.0", project);
+        Assert.Contains("net11.0", project);
         Assert.Contains("OpenHarmony.NET.PublishAotCross.targets", project);
         Assert.Contains("PublishAotCross.Tests/**", project);
     }

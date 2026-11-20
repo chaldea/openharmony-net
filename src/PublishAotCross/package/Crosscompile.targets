@@ -5,6 +5,9 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<!-- .NET 11 prefixes Unix native libraries with lib by default. Keep the
+		     AssemblyName.so contract used by the Stage bridge and HAP tooling. -->
+		<UseNativeLibPrefix>false</UseNativeLibPrefix>
 		<OpenHarmonyExecutableExtension Condition="'$(OS)' == 'Windows_NT'">.exe</OpenHarmonyExecutableExtension>
 		<OpenHarmonyApiLevel Condition="'$(OpenHarmonyApiLevel)' == ''">15</OpenHarmonyApiLevel>
 		<OpenHarmonySdkRoot Condition="'$(OpenHarmonySdkRoot)' == ''">$(OHOS_SDK_ROOT)</OpenHarmonySdkRoot>
@@ -68,7 +71,7 @@
 			BeforeTargets="SetupOSSpecificProps"
 			DependsOnTargets="ValidateOpenHarmonyResolvedSdk"
 			Condition="'$(OpenHarmonyTarget)' == 'true'">
-		<!-- .NET 10 probes CppLinker inside SetupOSSpecificProps, so the SDK
+		<!-- .NET 11 probes CppLinker inside SetupOSSpecificProps, so the SDK
 		     compiler must be selected before that target starts. -->
 		<PrependPath Value="$(OpenHarmonyNativeRoot)/llvm/bin" />
 		<!-- Query the ELF linker directly on macOS; the upstream clang probe

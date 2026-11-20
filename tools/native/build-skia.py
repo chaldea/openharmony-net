@@ -17,9 +17,9 @@ import tarfile
 ROOT = Path(__file__).resolve().parents[2]
 UPSTREAM = ROOT / 'dotnet/SkiaSharp'
 OUT = ROOT / 'artifacts/native/skia'
-SOURCE = OUT / 'source'
-SKIASHARP_COMMIT = '9699cdf046a989423a5e5eca68e7fd813486d81c'
-SKIA_COMMIT = '4bed689c9c9eb77a120c6a9d54af6a572c85d1c2'
+SKIASHARP_COMMIT = '2a53a3c8641073bc914c63ee158bbf62b8a0bb92'
+SKIA_COMMIT = '51cb594d773b5383a45065ea3c8cbec398ad2c36'
+SOURCE = OUT / ('source-' + SKIA_COMMIT[:12])
 DEPENDENCIES = ('expat', 'freetype', 'harfbuzz', 'libjpeg-turbo', 'libpng',
                 'libwebp', 'zlib')
 MIRRORS = {
@@ -88,7 +88,19 @@ def prepare_source():
         marker.write_text(SKIA_COMMIT)
     if marker.read_text() != SKIA_COMMIT:
         raise RuntimeError('Source cache revision changed. Use a fresh artifacts/native/skia directory.')
+    # API15's libc++ does not implement C++20 parenthesized aggregate
+    # construction. Materialize the same aggregate before optional::emplace.
+    pdf_tag = SOURCE / 'src/pdf/SkPDFTag.cpp'
+    original = subprocess.check_output(['git', 'show', f'{SKIA_COMMIT}:src/pdf/SkPDFTag.cpp'],
+                                       cwd=UPSTREAM / 'externals/skia').decode('utf-8')
+    if original.count('fData.emplace(ci, ci);') != 1:
+        raise RuntimeError('The pinned Skia PDF compatibility patch needs review.')
+    patched = original.replace('fData.emplace(ci, ci);', 'fData.emplace(Data{ci, ci});')
+    if pdf_tag.read_text() not in (original, patched):
+        raise RuntimeError('Unexpected changes in the cached Skia PDF source.')
+    pdf_tag.write_text(patched, encoding='utf-8')
     deps = {}
+    deps['Var'] = lambda name: deps['vars'][name]
     exec((SOURCE / 'DEPS').read_text(), deps)
     selected = {p: spec for p, spec in deps['deps'].items() if p.split('/')[-1] in DEPENDENCIES}
     if len(selected) != len(DEPENDENCIES):
@@ -113,10 +125,12 @@ def build(sdk, arch, ninja, jobs, dependencies):
         target_os='linux', target_cpu=arch, is_official_build=True,
         cc=(llvm / 'clang.exe').as_posix(), cxx=(llvm / 'clang++.exe').as_posix(),
         ar=(llvm / 'llvm-ar.exe').as_posix(),
-        skia_enable_tools=False, skia_enable_gpu=True, skia_use_egl=True,
+        skia_enable_tools=False, skia_enable_ganesh=True, skia_use_egl=True,
         skia_gl_standard='gles', skia_use_x11=False, skia_use_vulkan=False,
         skia_use_fontconfig=False, skia_use_icu=False, skia_use_piex=False,
-        skia_use_dng_sdk=False, skia_use_libgifcodec=False, skia_use_sfntly=False,
+        skia_use_dng_sdk=False, skia_use_wuffs=False,
+        skia_use_harfbuzz=False, skia_use_partition_alloc=False,
+        skia_enable_graphite=False,
         skia_use_system_expat=False, skia_use_system_freetype2=False,
         skia_use_system_libjpeg_turbo=False,
         skia_use_system_libpng=False, skia_use_system_libwebp=False, skia_use_system_zlib=False,
@@ -152,7 +166,7 @@ def build(sdk, arch, ninja, jobs, dependencies):
         shutil.copy2(library, destination / name)
         files.append(dict(name=name, sha256=sha256(library), needed=needed))
     manifest = dict(schemaVersion=1, abi=abi, targetTriple=triple, apiLevel=15,
-                    skiaSharpVersion='2.88.9', harfBuzzSharpVersion='7.3.0.3',
+                    skiaSharpVersion='4.157.0', harfBuzzSharpVersion='14.4.0.200',
                     skiaSharpCommit=SKIASHARP_COMMIT, skiaCommit=SKIA_COMMIT,
                     sdk=json.loads((sdk / 'oh-uni-package.json').read_text()),
                     sdkManifestSha256=sha256(sdk / 'oh-uni-package.json'),

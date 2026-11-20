@@ -1,7 +1,5 @@
 {
-  "version": "10.0.10-ohos.2-preview.1",
-  "sha256": {
-    "Chaldea.OpenHarmony.Runtime.NativeAot.arm64-v8a": "026cf3c0dfcd75847bfe0ff359c916d2a757505be82fad95447990a3855f80f5",
-    "Chaldea.OpenHarmony.Runtime.NativeAot.x86_64": "4e1523830ad0be6d6f4a5491af18314b441a6b07181c70928faa64cdde712d5c"
-  }
+  "version": "11.0.0-ohos.1-preview.1",
+  "buildFromSource": true,
+  "sha256": {}
 }

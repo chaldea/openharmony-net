@@ -123,6 +123,10 @@ public static class RuntimePackagerService
         {
             var (abi, rid) = ArchitectureMap[architecture];
             var source = ResolveSource(options.SourceRoot, baselineApi, architecture, rid, options.Configuration);
+            var provenance = ReadProvenance(source.Provenance, baselineApi);
+            if (!provenance.TryGetValue("sourceCommit", out var sourceCommit) || sourceCommit != options.RuntimeCommit)
+                throw new InvalidDataException($"Runtime artifacts were not built from requested commit '{options.RuntimeCommit}': '{source.Provenance}'.");
+            ValidateSdkCatalog(options, provenance, baselineApi);
             var packageRoot = Path.Combine(releaseRoot, abi, "runtime-pack");
             if (Directory.Exists(packageRoot))
             {
@@ -140,8 +144,6 @@ public static class RuntimePackagerService
                 File.Copy(source.Provenance, provenanceTarget, overwrite: true);
             }
 
-            var provenance = ReadProvenance(source.Provenance, baselineApi);
-            ValidateSdkCatalog(options, provenance, baselineApi);
             var package = new RuntimePackageManifest
             {
                 ApiLevel = baselineApi,
@@ -262,7 +264,7 @@ public static class RuntimePackagerService
             var coreclr = Path.Combine(artifacts, "bin", "coreclr", $"openharmony.{architecture}.{configuration}");
             var runtime = Path.Combine(artifacts, "bin", $"microsoft.netcore.app.runtime.{rid}", configuration, "runtimes", rid);
             var sdk = Path.Combine(coreclr, "aotsdk");
-            var framework = Path.Combine(runtime, "lib", "net10.0");
+            var framework = Path.Combine(runtime, "lib", "net11.0");
             var native = Path.Combine(runtime, "native");
             if (Directory.Exists(sdk) && Directory.Exists(framework) && Directory.Exists(native))
             {

@@ -26,12 +26,12 @@ do {
     if ($samplePid -match '^\d+$') {
         $log = & $hdc -t $Device shell hilog -x -T DotNetSmoke -P $samplePid
     }
-    if (($log -join "`n") -match 'DOTNET_SMOKE result=42 runtime=10 runs=1') { break }
+    if (($log -join "`n") -match 'DOTNET_SMOKE result=42 runtime=11 runs=1') { break }
     Start-Sleep -Seconds 2
 } while ((Get-Date) -lt $deadline)
 $log | Set-Content (Join-Path $evidence 'hilog.log')
-if (($log -join "`n") -notmatch 'DOTNET_SMOKE result=42 runtime=10 runs=1') {
-    throw 'The installed app did not report a successful .NET 10 NativeAOT invocation.'
+if (($log -join "`n") -notmatch 'DOTNET_SMOKE result=42 runtime=11 runs=1') {
+    throw 'The installed app did not report a successful .NET 11 NativeAOT invocation.'
 }
 Invoke-Checked $hdc @('-t',$Device,'shell','snapshot_display','-f','/data/local/tmp/dotnet-smoke.jpeg')
 Invoke-Checked $hdc @('-t',$Device,'file','recv','/data/local/tmp/dotnet-smoke.jpeg',(Join-Path $evidence 'screenshot.jpeg'))
@@ -41,7 +41,7 @@ Invoke-Checked $hdc @('-t',$Device,'file','recv','/data/local/tmp/dotnet-smoke.j
     architecture = (& $hdc -t $Device shell uname -m | Out-String).Trim()
     hapSha256 = (Get-FileHash $HapPath -Algorithm SHA256).Hash
     result = 42
-    runtimeMajor = 10
+    runtimeMajor = 11
     utc = [DateTimeOffset]::UtcNow.ToString('o')
 } | ConvertTo-Json | Set-Content (Join-Path $evidence 'result.json')
-Write-Output "Verified .NET 10 NativeAOT on $Device; evidence: $evidence"
+Write-Output "Verified .NET 11 NativeAOT on $Device; evidence: $evidence"

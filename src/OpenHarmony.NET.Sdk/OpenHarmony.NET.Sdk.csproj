@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <PackageId>Chaldea.OpenHarmony.Sdk</PackageId>
     <Authors>OpenHarmony.NET</Authors>
-    <Description>OpenHarmony .NET 10 workload SDK, NativeAOT application and HAP tooling.</Description>
+    <Description>OpenHarmony .NET 11 workload SDK, NativeAOT application and HAP tooling.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <BuildOutputTargetFolder>tools</BuildOutputTargetFolder>

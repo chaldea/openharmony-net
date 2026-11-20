@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -10,13 +10,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-	  <PackageReference Include="Avalonia.Skia" Version="11.1.4" />
-	  <PackageReference Include="PublishAotCross" Version="1.0.0" />
+	  <PackageReference Include="Avalonia" Version="11.1.4" />
 	  <PackageReference Include="Silk.NET.OpenGLES" Version="2.21.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/OpenHarmony.NDK.Bindings/OpenHarmony.NDK.Bindings.csproj" />
+    <ProjectReference Include="../../src/OpenHarmony.NDK.Bindings/OpenHarmony.NDK.Bindings.csproj" Condition="'$(OpenHarmonyTarget)' != 'true'" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+    <NativeLib>Shared</NativeLib>
+    <OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == ''">x86_64</OpenHarmonyAbi>
+    <RuntimeIdentifier Condition="'$(OpenHarmonyAbi)' == 'x86_64'">linux-musl-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(OpenHarmonyAbi)' == 'arm64-v8a'">linux-musl-arm64</RuntimeIdentifier>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="$(OpenHarmonyPackageVersion)" />
+    <PackageReference Include="Chaldea.OpenHarmony.NDK.Bindings" Version="$(OpenHarmonyPackageVersion)" />
   </ItemGroup>
 
 </Project>

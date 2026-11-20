@@ -11,9 +11,9 @@ public sealed record SdkInstallation(string Root, string Version, string Feature
 
     public static SdkInstallation Discover(string version, string sdkList, string? requestedRoot = null)
     {
-        Match match = Regex.Match(version, @"^10\.0\.(\d+)$");
-        if (!match.Success) throw new InvalidOperationException($"A released .NET 10 SDK is required; dotnet selected '{version}'. Check PATH and global.json.");
-        string band = "10.0." + (int.Parse(match.Groups[1].Value) / 100 * 100);
+        Match match = Regex.Match(version, @"^11\.0\.(\d+)$");
+        if (!match.Success) throw new InvalidOperationException($"A released .NET 11 SDK is required; dotnet selected '{version}'. Check PATH and global.json.");
+        string band = "11.0." + (int.Parse(match.Groups[1].Value) / 100 * 100);
         string prefix = version + " [";
         string[] locations = sdkList.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.StartsWith(prefix, StringComparison.Ordinal) && line.EndsWith(']'))

@@ -8,10 +8,10 @@ param(
 )
 . (Join-Path $PSScriptRoot 'common.ps1')
 if (!$DependencyRoot) { $DependencyRoot = Join-Path $RepoRoot 'artifacts/native/dependencies' }
-if (!$RuntimeDotnetRoot) { $RuntimeDotnetRoot = Join-Path $RepoRoot 'artifacts/runtime-dotnet' }
+$RuntimeDotnetRoot = & (Join-Path $PSScriptRoot 'resolve-runtime-sdk.ps1') -DotnetRoot $RuntimeDotnetRoot
 $oldDotnet = $env:DOTNET_INSTALL_DIR
 try {
-    if (Test-Path (Join-Path $RuntimeDotnetRoot 'dotnet.exe')) { $env:DOTNET_INSTALL_DIR = $RuntimeDotnetRoot }
+    $env:DOTNET_INSTALL_DIR = [IO.Path]::GetFullPath($RuntimeDotnetRoot)
     foreach ($arch in $Architectures) {
         $abi = if ($arch -eq 'x64') { 'x86_64' } else { 'arm64-v8a' }
         & (Join-Path $RepoRoot 'dotnet/runtime/eng/openharmony/build-runtime.ps1') `

@@ -1,10 +1,10 @@
 <Project>
   <PropertyGroup>
     <RepositoryRoot>$(MSBuildThisFileDirectory)</RepositoryRoot>
-    <OpenHarmonyPackageVersion Condition="'$(OpenHarmonyPackageVersion)' == ''">10.0.10-ohos.2-preview.1</OpenHarmonyPackageVersion>
+    <OpenHarmonyPackageVersion Condition="'$(OpenHarmonyPackageVersion)' == ''">11.0.0-ohos.1-preview.1</OpenHarmonyPackageVersion>
     <Version Condition="'$(Version)' == ''">$(OpenHarmonyPackageVersion)</Version>
     <PackageOutputPath>$(RepositoryRoot)artifacts/packages</PackageOutputPath>
-    <WorkloadFeatureBand Condition="'$(WorkloadFeatureBand)' == ''">10.0.300</WorkloadFeatureBand>
+    <WorkloadFeatureBand Condition="'$(WorkloadFeatureBand)' == ''">11.0.100</WorkloadFeatureBand>
     <RepositoryUrl>https://github.com/chaldea/openharmony-net</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IsPackable>false</IsPackable>

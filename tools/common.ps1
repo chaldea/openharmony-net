@@ -1,8 +1,13 @@
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path $PSScriptRoot -Parent
-$localDotnet = Join-Path $RepoRoot 'artifacts/dotnet-sdk'
-if (Test-Path (Join-Path $localDotnet 'dotnet.exe')) {
-    $env:PATH = "$localDotnet;$env:PATH"
+$sdkVersion = (Get-Content -Raw (Join-Path $RepoRoot 'global.json') | ConvertFrom-Json).sdk.version
+foreach ($directory in @('artifacts/dotnet-sdk11', 'artifacts/dotnet-sdk')) {
+    $localDotnet = Join-Path $RepoRoot $directory
+    if ((Test-Path (Join-Path $localDotnet 'dotnet.exe')) -and
+        (Test-Path (Join-Path $localDotnet "sdk/$sdkVersion"))) {
+        $env:PATH = "$localDotnet;$env:PATH"
+        break
+    }
 }
 
 function Invoke-Checked {

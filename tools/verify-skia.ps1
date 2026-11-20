@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory=$true)][string]$SdkRoot,
     [Parameter(Mandatory=$true)][string]$CommandLineTools,
     [Parameter(Mandatory=$true)][string]$JavaHome,
-    [string]$Version = '10.0.10-ohos.2-preview.1',
+    [string]$Version = '11.0.0-ohos.1-preview.1',
     [ValidateSet('x64','arm64')][string[]]$Architectures = @('x64','arm64'),
     [switch]$RunOnDevice,
     [string]$Device = '127.0.0.1:5555'

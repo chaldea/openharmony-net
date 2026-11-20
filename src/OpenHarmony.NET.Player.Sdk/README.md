@@ -36,7 +36,7 @@ When applied to a project with `OpenHarmonyTarget=true`, the package:
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <AssemblyName>XEngineGame</AssemblyName>
     <RuntimeIdentifier>linux-musl-arm64</RuntimeIdentifier>
     <PublishAot>true</PublishAot>
@@ -46,9 +46,9 @@ When applied to a project with `OpenHarmonyTarget=true`, the package:
     <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)..\artifacts\packages</RestoreAdditionalProjectSources>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="10.0.10-ohos.2-preview.1" />
-    <PackageReference Include="Chaldea.OpenHarmony.HapTooling" Version="10.0.10-ohos.2-preview.1" PrivateAssets="all" />
-    <PackageReference Include="Chaldea.OpenHarmony.NDK.Bindings" Version="10.0.10-ohos.2-preview.1" />
+    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="11.0.0-ohos.1-preview.1" />
+    <PackageReference Include="Chaldea.OpenHarmony.HapTooling" Version="11.0.0-ohos.1-preview.1" PrivateAssets="all" />
+    <PackageReference Include="Chaldea.OpenHarmony.NDK.Bindings" Version="11.0.0-ohos.1-preview.1" />
   </ItemGroup>
 </Project>
 ```
