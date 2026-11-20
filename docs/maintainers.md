@@ -149,7 +149,11 @@ PR 制品中的八个托管/工具包由当前源码构建。当前 .NET 11 基�
 `tools/ci-runtime-packages.json` 设置 `buildFromSource: true`；Windows job 会获取固定的
 runtime 子模块、准备 API13/API15 SDK 和依赖，并用 `build.ps1 -Target PackRuntime`
 生成两个原生包。`tools/prepare-ci-packages.ps1` 验证版本、源码提交和干净构建 provenance，
-再组成 `artifacts/ci-packages/`。首次构建会比托管构建耗时更长。
+再组成 `artifacts/ci-packages/`。NativeAOT 的可复用输出按 runtime 子模块提交、SDK
+catalog、依赖清单和构建脚本哈希存入 GitHub Actions cache。命中缓存时跳过 Native SDK、
+ICU/OpenSSL 和两个 ABI 的 runtime 编译，但仍执行 `PackRuntime`，用当前主仓库提交重新
+生成 manifest 和两个包；runtime 子模块或这些构建输入变化时才会重新编译。首次构建或
+缓存失效时会比托管构建耗时更长。
 发布后可将 `buildFromSource` 改为 false，填入 NuGet 下载包（含仓库签名）的 SHA-256，
 以复用正式基线；不能使用本地 nupkg 的哈希替代。不得用 .NET 10 原生包验证 .NET 11。
 本地复现先构建运行时，执行 `PackTools`、`PackRuntime` 和 `tools/prepare-ci-packages.ps1`，再给下面的

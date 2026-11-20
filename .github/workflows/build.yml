@@ -46,25 +46,43 @@ jobs:
           "WORKLOAD_VERSION=$version" >> $env:GITHUB_ENV
           "build-runtime=$((Get-Content -Raw tools/ci-runtime-packages.json | ConvertFrom-Json).buildFromSource -eq $true)" >> $env:GITHUB_OUTPUT
       - name: Check runtime sources and the stable build SDK
+        id: runtime
         if: steps.version.outputs.build-runtime == 'True'
         run: |
           git submodule update --init dotnet/runtime
           if ($LASTEXITCODE -ne 0) { throw 'Runtime checkout failed.' }
           ./tools/resolve-runtime-sdk.ps1
+          "commit=$((git -C dotnet/runtime rev-parse HEAD).Trim())" >> $env:GITHUB_OUTPUT
       - name: Build and test the unified solution
         run: ./build.ps1 -Target Test -Version $env:WORKLOAD_VERSION
       - name: Package managed and build tools
         run: ./build.ps1 -Target PackTools -Version $env:WORKLOAD_VERSION
-      - name: Prepare native SDKs and dependencies
+      - name: Restore cached NativeAOT runtime baseline
+        id: runtime-cache
         if: steps.version.outputs.build-runtime == 'True'
+        uses: actions/cache@v4
+        with:
+          path: |
+            artifacts/native/runtime/api13/x64/Release/bin/coreclr/openharmony.x64.Release
+            artifacts/native/runtime/api13/x64/Release/bin/microsoft.netcore.app.runtime.linux-musl-x64
+            artifacts/native/runtime/api13/x64/Release/runtime-build-provenance.json
+            artifacts/native/runtime/api13/arm64/Release/bin/coreclr/openharmony.arm64.Release
+            artifacts/native/runtime/api13/arm64/Release/bin/microsoft.netcore.app.runtime.linux-musl-arm64
+            artifacts/native/runtime/api13/arm64/Release/runtime-build-provenance.json
+          key: runtime-${{ runner.os }}-${{ steps.runtime.outputs.commit }}-${{ hashFiles('global.json', 'tools/build-runtime.ps1', 'tools/prepare-native-dependencies.ps1', 'tools/ci-runtime-packages.json', 'dotnet/runtime/eng/openharmony/sdk-catalog.json', 'dotnet/runtime/eng/openharmony/dependencies.json') }}
+      - name: Prepare native SDKs and dependencies
+        if: steps.version.outputs.build-runtime == 'True' && steps.runtime-cache.outputs.cache-hit != 'true'
         run: |
           ./tools/install-native-sdk.ps1
           ./tools/prepare-native-dependencies.ps1 -SdkRoot ./artifacts/native/sdk
       - name: Build and package the unpublished runtime baseline from source
-        if: steps.version.outputs.build-runtime == 'True'
+        if: steps.version.outputs.build-runtime == 'True' && steps.runtime-cache.outputs.cache-hit != 'true'
         run: |
           ./tools/build-runtime.ps1 -SdkRoot ./artifacts/native/sdk
           ./build.ps1 -Target PackRuntime -Version $env:WORKLOAD_VERSION
+      - name: Package the runtime baseline from the cached build
+        if: steps.version.outputs.build-runtime == 'True' && steps.runtime-cache.outputs.cache-hit == 'true'
+        run: ./build.ps1 -Target PackRuntime -Version $env:WORKLOAD_VERSION
       - name: Complete the workload feed with pinned native runtime packages
         run: ./tools/prepare-ci-packages.ps1
       - uses: actions/upload-artifact@v4
