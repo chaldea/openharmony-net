@@ -2,6 +2,7 @@ name: Build and test
 on:
   pull_request:
     paths:
+      - '.github/workflows/build.yml'
       - 'src/**'
       - 'tests/**'
       - 'tools/**'
@@ -16,6 +17,12 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 180
+    env:
+      # Runtime sources exceed MAX_PATH. Apply to Git and its child processes
+      # before checkout, including the later runtime submodule initialization.
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: core.longpaths
+      GIT_CONFIG_VALUE_0: 'true'
     defaults:
       run:
         shell: pwsh

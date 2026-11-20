@@ -39,10 +39,13 @@ build.ps1                  构建入口
 普通构建和测试不需要 Harmony SDK，也不要求先生成 runtime 包。
 
 ```powershell
-git submodule update --init --recursive
+git -c core.longpaths=true submodule update --init --recursive
 ./build.ps1 -Target Test
 ./build.ps1 -Target PackTools
 ```
+
+runtime 的部分源码路径在 Windows 上超过 260 字符；初始化子模块时需启用 Git 长路径支持。
+CI 和发布任务通过进程环境中的 `core.longpaths=true` 在检出前启用该选项。
 
 也可直接执行 `dotnet build OpenHarmony.slnx -c Release` 和
 `dotnet test OpenHarmony.slnx -c Release`。八个工具/manifest 包输出至 `artifacts/packages/`：

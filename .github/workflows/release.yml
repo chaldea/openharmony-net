@@ -18,6 +18,11 @@ jobs:
     # NativeAOT + ICU/OpenSSL needs the documented VS/SDK/CLI environment and disk space.
     runs-on: [self-hosted, Windows, X64, harmonyos]
     timeout-minutes: 720
+    env:
+      # Recursive checkout needs long paths without changing runner-wide config.
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: core.longpaths
+      GIT_CONFIG_VALUE_0: 'true'
     defaults:
       run:
         shell: pwsh
