@@ -3,10 +3,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS</PackageId>
     <NativeAssetName>libHarfBuzzSharp.so</NativeAssetName>
-    <Description>HarmonyOS API15+ x86_64 and arm64 native assets for HarfBuzzSharp 7.3.0.3.</Description>
+    <Description>HarmonyOS API15+ x86_64 and arm64 native assets for HarfBuzzSharp 14.4.0.200.</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="HarfBuzzSharp" Version="[7.3.0.3]" />
+    <PackageReference Include="HarfBuzzSharp" Version="[14.4.0.200]" />
   </ItemGroup>
   <Import Project="../HarmonyOS.NativeAssets/NativeAssets.pack.targets" />
 </Project>

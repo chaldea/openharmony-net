@@ -12,7 +12,7 @@ dotnet/                    第三方源码（Git submodule）
   core-origin/
   runtime/                 OpenHarmony runtime 移植
   runtime-origin/          上游比较基线
-  SkiaSharp/               SkiaSharp 2.88.9（包含固定提交的 Skia C API 源码）
+  SkiaSharp/               SkiaSharp 4.157.0（包含固定提交的 Skia C API 源码）
 src/
   OpenHarmony.NDK.Bindings/
   OpenHarmony.NET.HapTooling/
@@ -35,7 +35,7 @@ build.ps1                  构建入口
 
 ## 构建与测试
 
-安装 .NET SDK 10.0.301 或更新的 .NET 10 feature band；`global.json` 固定主版本。
+安装 .NET SDK 11.0.100 或同一 11.0.100 feature band 的补丁版；`global.json` 固定 feature band。
 普通构建和测试不需要 Harmony SDK，也不要求先生成 runtime 包。
 
 ```powershell
@@ -47,15 +47,15 @@ git submodule update --init --recursive
 也可直接执行 `dotnet build OpenHarmony.slnx -c Release` 和
 `dotnet test OpenHarmony.slnx -c Release`。八个工具/manifest 包输出至 `artifacts/packages/`：
 Chaldea.OpenHarmony.NDK.Bindings、PublishAotCross、Player.Sdk、HapTooling（均使用 Chaldea.OpenHarmony 前缀）。
-以及 Chaldea.OpenHarmony.Sdk、Chaldea.OpenHarmony.Templates、Chaldea.OpenHarmony.Workload.Manifest-10.0.300 和 Chaldea.OpenHarmony.Workload。
+以及 Chaldea.OpenHarmony.Sdk、Chaldea.OpenHarmony.Templates、Chaldea.OpenHarmony.Workload.Manifest-11.0.100 和 Chaldea.OpenHarmony.Workload。
 Player.Sdk 包声明两个运行时包依赖，因此完整消费它还需要下面的原生运行时构建。
 
 ## 从源码构建运行时
 
 Windows 主机需要 PowerShell 7.3+、Git for Windows、Visual Studio C++ 构建工具、
-Windows SDK、.NET 10，以及官方 API 13 和 API 15 Native SDK。
+Windows SDK、.NET 11，以及官方 API 13 和 API 15 Native SDK。
 API 13 用于运行时兼容基线；ICU/OpenSSL 依赖按现有移植约定使用 API 15。
-完整流程不会以仓库里的旧 .NET 9 二进制代替 .NET 10 构建。
+完整流程不会以仓库里的旧 .NET 9 二进制代替 .NET 11 构建。
 
 ```powershell
 # 下载官方 Native SDK，校验服务端公布的 SHA-256 后解压到本地 artifacts。
@@ -64,7 +64,7 @@ API 13 用于运行时兼容基线；ICU/OpenSSL 依赖按现有移植约定使�
 # 下载并校验固定版本的 ICU/OpenSSL，构建主机工具与两个目标架构。
 pwsh ./tools/prepare-native-dependencies.ps1 -SdkRoot ./artifacts/native/sdk
 
-# 构建 x64 和 arm64 的 .NET 10 NativeAOT、基础库及原生库。
+# 构建 x64 和 arm64 的 .NET 11 NativeAOT、基础库及原生库。
 pwsh ./tools/build-runtime.ps1 -SdkRoot ./artifacts/native/sdk
 
 # 编译 SkiaSharp / HarfBuzzSharp，需 Python 3.12+、Ninja 和固定版本上游源码。
@@ -87,7 +87,7 @@ pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
 ## 底层示例与源码调试
 
 示例调用 C# 的整数求和、集合分配和 GC，并显示运行时主版本。
-模拟器验证必须同时得到 `result=42` 和 `runtime=10`。
+模拟器验证必须同时得到 `result=42` 和 `runtime=11`。
 
 ```powershell
 ./tools/build-sample.ps1 `
@@ -107,7 +107,15 @@ pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
 其它目标通过两个脚本的 `-Device` 参数指定。启动命令见下面的验证记录。
 
 HAP 输出至 `artifacts/sample/`。本机 SDK/Java 路径通过参数提供，证书及签名配置不提交。
-详细验证步骤和实际结果见 [构建与验证记录](ISSUE-001-validation.md)。
+当前 .NET 11 升级的输入、兼容处理与验证结果见 [ISSUE-006 记录](ISSUE-006-validation.md)。
+历史 .NET 10 构建步骤见 [ISSUE-001 记录](ISSUE-001-validation.md)。
+
+验证 CrossCompileHello 和旧 OpenHarmony.Demo（脚本自动生成隔离的 Stage 宿主）：
+
+```powershell
+./tools/verify-legacy-examples.ps1 -SdkRoot ./artifacts/native/sdk `
+  -CommandLineTools $env:OHOS_COMMAND_LINE_TOOLS -JavaHome $env:JAVA_HOME -RunOnDevice
+```
 
 ## 维护
 
@@ -126,12 +134,14 @@ publish，检查 HAP 内原生库的 ELF 架构，并验证卸载和 workload re
 预期失败场景验证通过后显示 `PASS: negative test`，只有实际异常才打印原始失败日志并
 终止任务。某个平台失败不会取消其他平台。
 
-PR 制品中的八个托管/工具包由当前源码构建。两个原生运行时包复用已发布的固定版本，
-由 `tools/prepare-ci-packages.ps1` 下载并按 `tools/ci-runtime-packages.json` 中的 SHA-256
-验证，与当前构建的包一起放入空的 `artifacts/ci-packages/`。这些哈希针对 NuGet
-下载包（含仓库签名），不能使用发布前本地 nupkg 的哈希代替。更新包版本时需要同步
-已发布运行时基线及哈希；PR 矩阵不替代运行时源码修改的完整发布验证。
-本地复现使用 `build.ps1 -Target PackTools`、`tools/prepare-ci-packages.ps1`，再给下面的
+PR 制品中的八个托管/工具包由当前源码构建。当前 .NET 11 基线尚未发布，
+`tools/ci-runtime-packages.json` 设置 `buildFromSource: true`；Windows job 会获取固定的
+runtime 子模块、准备 API13/API15 SDK 和依赖，并用 `build.ps1 -Target PackRuntime`
+生成两个原生包。`tools/prepare-ci-packages.ps1` 验证版本、源码提交和干净构建 provenance，
+再组成 `artifacts/ci-packages/`。首次构建会比托管构建耗时更长。
+发布后可将 `buildFromSource` 改为 false，填入 NuGet 下载包（含仓库签名）的 SHA-256，
+以复用正式基线；不能使用本地 nupkg 的哈希替代。不得用 .NET 10 原生包验证 .NET 11。
+本地复现先构建运行时，执行 `PackTools`、`PackRuntime` 和 `tools/prepare-ci-packages.ps1`，再给下面的
 `verify-workload.ps1` 传入 `-PackageSource ./artifacts/ci-packages`。
 
 原生 runtime 编译、签名和设备验收需要安装 Harmony 工具链的 Windows 主机。
@@ -143,7 +153,7 @@ PR 制品中的八个托管/工具包由当前源码构建。两个原生运行�
 发布流程及 runner/secrets 设置见 [NuGet 发布流程](releases.md)。验证新打包的工具和 workload：
 
 ```powershell
-./tools/verify-workload.ps1 -DotnetRoot ./artifacts/dotnet-sdk `
+./tools/verify-workload.ps1 -DotnetRoot ./artifacts/dotnet-sdk11 `
   -CommandLineTools F:\.huawei\command-line-tools `
   -JavaHome 'D:\Program Files\Huawei\DevEco Studio\jbr' `
   -RunOnDevice -KeepInstalled

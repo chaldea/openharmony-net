@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<OpenHarmonyRuntimeRepoRoot>$(MSBuildThisFileDirectory)</OpenHarmonyRuntimeRepoRoot>
 		<OpenHarmonyApiLevel Condition="'$(OpenHarmonyApiLevel)' == ''">15</OpenHarmonyApiLevel>
-		<OpenHarmonyRuntimeVersion Condition="'$(OpenHarmonyRuntimeVersion)' == ''">10.0.10-ohos.2-preview.1</OpenHarmonyRuntimeVersion>
+		<OpenHarmonyRuntimeVersion Condition="'$(OpenHarmonyRuntimeVersion)' == ''">11.0.0-ohos.1-preview.1</OpenHarmonyRuntimeVersion>
 		<OpenHarmonyRuntimePackageRoot Condition="'$(OpenHarmonyRuntimePackageRoot)' == ''">$(OpenHarmonyRuntimeRepoRoot)..\..\artifacts\runtime\releases\$(OpenHarmonyRuntimeVersion)</OpenHarmonyRuntimePackageRoot>
 	</PropertyGroup>
 

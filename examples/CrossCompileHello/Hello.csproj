@@ -3,12 +3,17 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Player.Sdk defaults to an ArkTS-loadable library; this sample is a console executable. -->
+    <NativeLib />
+    <TargetFramework>net11.0</TargetFramework>
     <PublishAot>true</PublishAot>
     <DefaultItemExcludes>$(DefaultItemExcludes);PublishAotCross.Tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
-  <Import Project="../../src/PublishAotCross/package/OpenHarmony.NET.PublishAotCross.targets" />
+  <ItemGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="$(OpenHarmonyPackageVersion)" />
+  </ItemGroup>
+  <Import Project="../../src/PublishAotCross/package/OpenHarmony.NET.PublishAotCross.targets" Condition="'$(OpenHarmonyTarget)' != 'true'" />
 </Project>

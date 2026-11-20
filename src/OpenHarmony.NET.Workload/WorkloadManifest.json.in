@@ -2,7 +2,7 @@
   "version": "@VERSION@",
   "workloads": {
     "harmonyos": {
-      "description": ".NET 10 NativeAOT applications for OpenHarmony / HarmonyOS",
+      "description": ".NET 11 NativeAOT applications for OpenHarmony / HarmonyOS",
       "platforms": ["win-x64", "linux-x64", "osx-x64", "osx-arm64"],
       "packs": [
         "Chaldea.OpenHarmony.Sdk",

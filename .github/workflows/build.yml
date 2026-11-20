@@ -15,6 +15,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 180
     defaults:
       run:
         shell: pwsh
@@ -34,10 +35,20 @@ jobs:
           "value=$version" >> $env:GITHUB_OUTPUT
           "sdk=$((Get-Content -Raw global.json | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT
           "WORKLOAD_VERSION=$version" >> $env:GITHUB_ENV
+          "build-runtime=$((Get-Content -Raw tools/ci-runtime-packages.json | ConvertFrom-Json).buildFromSource -eq $true)" >> $env:GITHUB_OUTPUT
       - name: Build and test the unified solution
         run: ./build.ps1 -Target Test -Version $env:WORKLOAD_VERSION
       - name: Package managed and build tools
         run: ./build.ps1 -Target PackTools -Version $env:WORKLOAD_VERSION
+      - name: Build the unpublished runtime baseline from source
+        if: steps.version.outputs.build-runtime == 'True'
+        run: |
+          git submodule update --init dotnet/runtime
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime checkout failed.' }
+          ./tools/install-native-sdk.ps1
+          ./tools/prepare-native-dependencies.ps1 -SdkRoot ./artifacts/native/sdk
+          ./tools/build-runtime.ps1 -SdkRoot ./artifacts/native/sdk
+          ./build.ps1 -Target PackRuntime -Version $env:WORKLOAD_VERSION
       - name: Complete the workload feed with pinned native runtime packages
         run: ./tools/prepare-ci-packages.ps1
       - uses: actions/upload-artifact@v4
@@ -73,8 +84,7 @@ jobs:
           path: artifacts/ci-packages
       - uses: actions/setup-dotnet@v4
         with:
-          # global-json-file honors latestFeature and can select a different
-          # feature band from the one embedded in the workload manifest.
+          # Install exactly the feature band embedded in the workload manifest.
           dotnet-version: ${{ needs.build.outputs.sdk-version }}
       - name: Verify the standalone SDK version
         run: |

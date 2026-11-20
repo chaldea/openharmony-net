@@ -6,7 +6,7 @@
 		<IsPackable>true</IsPackable>
 
 		<PackageId>Chaldea.OpenHarmony.HapTooling</PackageId>
-		<Version Condition="'$(Version)' == ''">10.0.10-ohos.2-preview.1</Version>
+		<Version Condition="'$(Version)' == ''">11.0.0-ohos.1-preview.1</Version>
 		<Authors>OpenHarmony.NET</Authors>
 		<Company>OpenHarmony.NET</Company>
 		<Description>Provider-owned HAP/APP packaging tooling for the XEngine HarmonyOS build pipeline. Exposes the BuildHap/VerifyHap/BuildApp/VerifyApp MSBuild targets that XEngine's HarmonyOSBuildPipeline invokes, plus the generic Stage template (Hvigor project skeleton, XComponent native-host wiring), the xengine-packaging.json contract, and the OpenHarmony SDK catalog consumed by HarmonyOSToolchainResolver.</Description>

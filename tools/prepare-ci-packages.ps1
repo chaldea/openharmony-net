@@ -10,7 +10,7 @@ $repository = Split-Path $PSScriptRoot -Parent
 $version = $props.Project.PropertyGroup.OpenHarmonyPackageVersion.InnerText
 $baseline = Get-Content -Raw (Join-Path $PSScriptRoot 'ci-runtime-packages.json') | ConvertFrom-Json
 if ($version -ne $baseline.version) {
-    throw "Update ci-runtime-packages.json to the published runtime baseline for $version before running PR validation."
+    throw "Update ci-runtime-packages.json to the runtime baseline for $version before running PR validation."
 }
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 if (Get-ChildItem -LiteralPath $OutputDirectory -Filter '*.nupkg') {
@@ -22,6 +22,28 @@ foreach ($id in $catalog.packages) {
     $name = "$id.$version.nupkg"
     $destination = Join-Path $OutputDirectory $name
     if ($id -like '*.Runtime.NativeAot.*') {
+        if ($baseline.buildFromSource) {
+            $source = Join-Path $PackageDirectory $name
+            if (!(Test-Path -LiteralPath $source -PathType Leaf)) { throw "Build PackRuntime first. Missing package: $source" }
+            $runtimeCommit = (& git -C (Join-Path $repository 'dotnet/runtime') rev-parse HEAD).Trim()
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot determine the runtime source revision.' }
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $zip = [IO.Compression.ZipFile]::OpenRead($source)
+            try {
+                $entry = $zip.GetEntry('manifest.json')
+                if (!$entry) { throw "Missing runtime provenance: $name" }
+                $reader = [IO.StreamReader]::new($entry.Open())
+                try { $manifest = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+                if ($manifest.version -ne $version -or $manifest.runtimeCommit -ne $runtimeCommit -or
+                    $manifest.schemaVersion -ne 2 -or !$manifest.compatibilityEntries -or
+                    @($manifest.compatibilityEntries | Where-Object sourceDirty).Count) {
+                    throw "Runtime package does not match the clean current source: $name"
+                }
+            }
+            finally { $zip.Dispose() }
+            Copy-Item -LiteralPath $source -Destination $destination
+            continue
+        }
         $expected = $baseline.sha256.$id
         if (!$expected -or $expected -notmatch '^[0-9a-f]{64}$') { throw "Missing runtime checksum: $id" }
         $lowerId = $id.ToLowerInvariant()

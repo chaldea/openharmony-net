@@ -12,6 +12,7 @@ public static unsafe class Exports
     public static int Render(byte* pixels, int length)
     {
         if (pixels == null || length != Width * Height * 4) return -1;
+        if (Environment.Version.Major != 11) return -5;
         try
         {
             using var surface = SKSurface.Create(new SKImageInfo(Width, Height,
@@ -28,23 +29,23 @@ public static unsafe class Exports
             paint.Color = new SKColor(255, 255, 255, 190);
             canvas.DrawCircle(210, 320, 90, paint);
             paint.Color = SKColor.Parse("#101828");
-            using var path = new SKPath();
-            path.MoveTo(330, 430);
-            path.CubicTo(350, 190, 500, 190, 540, 430);
-            path.Close();
+            using var pathBuilder = new SKPathBuilder();
+            pathBuilder.MoveTo(330, 430);
+            pathBuilder.CubicTo(350, 190, 500, 190, 540, 430);
+            pathBuilder.Close();
+            using var path = pathBuilder.Detach();
             canvas.DrawPath(path, paint);
 
             // Use the same system font in HarfBuzz and the Skia glyph renderer.
             const string fontPath = "/system/fonts/HarmonyOS_Sans.ttf";
             using var typeface = SKTypeface.FromFile(fontPath)
                 ?? throw new InvalidOperationException("HarmonyOS Sans is unavailable.");
-            paint.Typeface = typeface;
-            paint.TextSize = 45;
+            using var headingFont = new SKFont(typeface, 45);
+            using var captionFont = new SKFont(typeface, 23);
             paint.Color = SKColors.White;
-            canvas.DrawText("Skia on HarmonyOS", 40, 88, paint);
-            paint.TextSize = 23;
+            canvas.DrawText("Skia on HarmonyOS", 40, 88, SKTextAlign.Left, headingFont, paint);
             paint.Color = SKColor.Parse("#98A2B3");
-            canvas.DrawText("C# / .NET 10 NativeAOT", 40, 130, paint);
+            canvas.DrawText("C# / .NET 11 NativeAOT", 40, 130, SKTextAlign.Left, captionFont, paint);
 
             using var blob = Blob.FromFile(fontPath);
             using var face = new Face(blob, 0);
@@ -61,8 +62,8 @@ public static unsafe class Exports
             using var skFont = new SKFont(typeface, 42);
             using var builder = new SKTextBlobBuilder();
             var run = builder.AllocatePositionedRun(skFont, infos.Length);
-            var glyphs = run.GetGlyphSpan();
-            var points = run.GetPositionSpan();
+            var glyphs = run.Glyphs;
+            var points = run.Positions;
             float x = 40, y = 630;
             for (var i = 0; i < infos.Length; i++)
             {
@@ -74,9 +75,8 @@ public static unsafe class Exports
             using var text = builder.Build();
             paint.Color = SKColors.White;
             canvas.DrawText(text, 0, 0, paint);
-            paint.TextSize = 23;
             paint.Color = SKColor.Parse("#98A2B3");
-            canvas.DrawText($"HarfBuzz shaped {infos.Length} glyphs", 40, 683, paint);
+            canvas.DrawText($"HarfBuzz shaped {infos.Length} glyphs", 40, 683, SKTextAlign.Left, captionFont, paint);
             canvas.Flush();
             return infos.Length;
         }

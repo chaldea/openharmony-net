@@ -132,6 +132,22 @@ public sealed class ManifestTests
     }
 
     [Fact]
+    public void RejectsArtifactsFromAnOlderRuntimeCommit()
+    {
+        var root = CreateFixture();
+        try
+        {
+            var options = Options(root, Path.Combine(root, "out")) with { RuntimeCommit = "net11-commit" };
+            var error = Assert.Throws<InvalidDataException>(() => RuntimePackagerService.Package(options));
+            Assert.Contains("not built from requested commit", error.Message);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void RejectsDirtyRuntimeProvenance()
     {
         var root = CreateFixture();
@@ -202,7 +218,7 @@ public sealed class ManifestTests
         Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
 
     private static RuntimePackagerOptions Options(string source, string output) => new(
-        source, output, "10.0.10-ohos.test", "runtime-sha", "bindings-sha", new[] { 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26 }, "Release", new[] { "arm64", "x64" })
+        source, output, "11.0.0-ohos.test", "runtime-sha", "bindings-sha", new[] { 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26 }, "Release", new[] { "arm64", "x64" })
     {
         SdkCatalogPath = Path.Combine(source, "sdk-catalog.json")
     };
@@ -217,18 +233,18 @@ public sealed class ManifestTests
             var coreclr = Path.Combine(root, "artifacts", "bin", "coreclr", $"openharmony.{architecture}.Release");
             var runtime = Path.Combine(root, "artifacts", "bin", $"microsoft.netcore.app.runtime.linux-musl-{architecture}", "Release", "runtimes", $"linux-musl-{architecture}");
             Directory.CreateDirectory(Path.Combine(coreclr, "aotsdk"));
-            Directory.CreateDirectory(Path.Combine(runtime, "lib", "net10.0"));
+            Directory.CreateDirectory(Path.Combine(runtime, "lib", "net11.0"));
             Directory.CreateDirectory(Path.Combine(runtime, "native"));
             Directory.CreateDirectory(Path.Combine(runtime, "native", "first"));
             Directory.CreateDirectory(Path.Combine(runtime, "native", "second"));
             File.WriteAllText(Path.Combine(coreclr, "aotsdk", "libaot.a"), architecture);
-            File.WriteAllText(Path.Combine(runtime, "lib", "net10.0", "System.Native.a"), architecture);
+            File.WriteAllText(Path.Combine(runtime, "lib", "net11.0", "System.Native.a"), architecture);
             File.WriteAllText(Path.Combine(runtime, "native", "libc++_shared.so"), architecture);
             File.WriteAllText(Path.Combine(runtime, "native", "first", "libduplicate.so"), architecture);
             File.WriteAllText(Path.Combine(runtime, "native", "second", "libduplicate.so"), architecture);
             File.WriteAllText(
                 Path.Combine(coreclr, "runtime-build-provenance.json"),
-                "{\"buildApi\":13,\"sourceDirty\":false,\"sdkManifestSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}");
+                "{\"buildApi\":13,\"sourceCommit\":\"runtime-sha\",\"sourceDirty\":false,\"sdkManifestSha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}");
         }
         return root;
     }

@@ -2,12 +2,12 @@
 param(
     [Parameter(Mandatory=$true)][string]$SdkRoot,
     [ValidateSet('x64','arm64')][string[]]$Architectures = @('x64','arm64'),
-    [string]$Version = '10.0.10-ohos.2-preview.1',
+    [string]$Version = '11.0.0-ohos.1-preview.1',
     [int]$ApiLevel = 15
 )
 . (Join-Path $PSScriptRoot 'common.ps1')
 $SdkRoot = (Resolve-Path -LiteralPath $SdkRoot).Path
-$output = Join-Path $RepoRoot 'artifacts/package-validation'
+$output = Join-Path $RepoRoot ('artifacts/package-validation/' + [guid]::NewGuid().ToString('N').Substring(0,8))
 $packages = Join-Path $RepoRoot 'artifacts/packages'
 # Always restore the just-built packages, even when their version is unchanged.
 $cache = Join-Path $output ('cache-' + [guid]::NewGuid().ToString('N'))

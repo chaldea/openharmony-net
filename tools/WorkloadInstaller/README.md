@@ -5,7 +5,7 @@ or repository checkout. The manifest is embedded in this tool and pins packs to
 the same release version. See the repository README for application quick start.
 
 Prerequisites: Windows x64, Linux x64 or macOS x64/arm64, a writable standalone
-.NET SDK in feature band 10.0.300, and its .NET 10 runtime on PATH. Use the SDK
+.NET SDK in feature band 11.0.100, and its .NET 11 runtime on PATH. Use the SDK
 ZIP/tarball or dotnet-install; MSI-managed SDKs cannot install these file-based
 workload packs. Select the standalone SDK with PATH before running:
 

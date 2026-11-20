@@ -1,8 +1,8 @@
-# OpenHarmony .NET 10 Runtime
+# OpenHarmony .NET 11 Runtime
 
 > 本组件已整合到 OpenHarmony 主仓库。请使用根目录的 `build.ps1` 和 `OpenHarmony.slnx`。
 
-这是 OpenHarmony-NET/runtime 的 .NET 10 NativeAOT runtime 包仓库，目标架构为
+这是 OpenHarmony-NET/runtime 的 .NET 11 NativeAOT runtime 包仓库，目标架构为
 `arm64-v8a` 真机和 `x86_64` 模拟器。
 
 ## 支持范围
@@ -22,7 +22,7 @@
 dotnet run --project tools/RuntimePackager/RuntimePackager.csproj -- `
   --source-root artifacts/native/runtime `
   --output-root artifacts/runtime `
-  --version 10.0.10-ohos.2-preview.1 `
+  --version 11.0.0-ohos.1-preview.1 `
   --runtime-commit <runtime-commit> `
   --bindings-commit <bindings-commit> `
   --api-levels 13,14,15,16,17,18,19,20,21,22,23,24,26 `
@@ -35,13 +35,13 @@ dotnet run --project tools/RuntimePackager/RuntimePackager.csproj -- `
 
 ## 在项目中使用
 
-项目使用 .NET 10，通过 Player.Sdk 引入交叉编译工具和运行时包。
+项目使用 .NET 11，通过 Player.Sdk 引入交叉编译工具和运行时包。
 把 `artifacts/packages` 加入项目 NuGet 源后：
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <RuntimeIdentifier>linux-musl-arm64</RuntimeIdentifier>
     <PublishAot>true</PublishAot>
     <NativeLib>Shared</NativeLib>
@@ -49,7 +49,7 @@ dotnet run --project tools/RuntimePackager/RuntimePackager.csproj -- `
     <OpenHarmonyApiLevel>15</OpenHarmonyApiLevel>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="10.0.10-ohos.2-preview.1" />
+    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="11.0.0-ohos.1-preview.1" />
   </ItemGroup>
 </Project>
 ```

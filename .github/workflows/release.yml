@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'NuGet version (for example 10.0.10-ohos.2-preview.1)'
+        description: 'NuGet version (for example 11.0.0-ohos.1-preview.1)'
         required: true
         type: string
 permissions:
@@ -71,7 +71,7 @@ jobs:
       - name: Install a disposable SDK for workload verification
         run: |
           Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile ./artifacts/dotnet-install.ps1
-          & ./artifacts/dotnet-install.ps1 -Version 10.0.301 -Architecture x64 -InstallDir ./artifacts/release-sdk -NoPath
+          & ./artifacts/dotnet-install.ps1 -Version 11.0.100 -Architecture x64 -InstallDir ./artifacts/release-sdk -NoPath
       - name: Verify tool, workload lifecycle and both HAP architectures
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.value }}
@@ -99,7 +99,7 @@ jobs:
           path: packages
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
       - name: Verify hashes and publish packs before bootstrap tool
         shell: pwsh
         env:

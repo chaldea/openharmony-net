@@ -1,23 +1,26 @@
 # .NET for OpenHarmony
 
-使用 C# 和 .NET 10 NativeAOT 构建 OpenHarmony / HarmonyOS 应用，通过标准
+使用 C# 和 .NET 11 NativeAOT 构建 OpenHarmony / HarmonyOS 应用，通过标准
 `dotnet build`、`dotnet run` 和 `dotnet publish` 完成编译、设备运行和 HAP 打包。
 
 ## 快速开始
 
-以下使用 NuGet 发布包，不需要克隆或构建本仓库。当前发行线为预览版；
+以下展示 NuGet 安装流程，发布后不需要克隆或构建本仓库。当前发行线为预览版；
 包名统一使用 `Chaldea.OpenHarmony.*`。可用版本见 [NuGet 工具包页面](https://www.nuget.org/packages/Chaldea.OpenHarmony.Workload)。
+
+本次 .NET 11 升级版本为 `11.0.0-ohos.1-preview.1`。发布到 NuGet 前，请按
+[维护说明](docs/maintainers.md) 构建并使用本地 `artifacts/packages` 源安装和验证。
 
 ### 1. 准备环境
 
-需要 Windows x64、**ZIP 解压安装的 .NET SDK 10.0.301**（feature band 10.0.300）、
+需要 Windows x64、**ZIP 解压安装的 .NET SDK 11.0.100**（feature band 11.0.100）、
 官方 HarmonyOS command-line-tools 及 SDK，以及 JDK 17+。
 MSI/Visual Studio 管理的 workload 安装不支持这里的第三方包，请使用独立 SDK。
 
 安装并配置好路径后，先在 PowerShell 中确认环境变量。将示例路径替换为实际安装位置：
 
 ```powershell
-$env:DOTNET_ROOT = 'C:\dotnet10'
+$env:DOTNET_ROOT = 'C:\dotnet11'
 $env:PATH = "$env:DOTNET_ROOT;$env:USERPROFILE\.dotnet\tools;$env:PATH"
 $env:OHOS_COMMAND_LINE_TOOLS = 'c:\command-line-tools'
 $env:JAVA_HOME = 'c:\Program Files\Huawei\DevEco Studio\jbr'
@@ -27,14 +30,14 @@ Test-Path "$env:OHOS_COMMAND_LINE_TOOLS\sdk\default\openharmony\native\oh-uni-pa
 Test-Path "$env:JAVA_HOME\bin\java.exe"
 ```
 
-版本应为 `10.0.3xx`，两个路径检查均为 `True`。SDK 下载入口：
-[.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0)。
+版本应为 `11.0.1xx`，两个路径检查均为 `True`。SDK 下载入口：
+[.NET 11](https://dotnet.microsoft.com/download/dotnet/11.0)。
 这些赋值对当前 PowerShell 窗口有效；长期使用可配置为用户环境变量。
 
 ### 2. 安装 workload
 
 ```powershell
-dotnet tool install -g Chaldea.OpenHarmony.Workload --version 10.0.10-ohos.2-preview.1
+dotnet tool install -g Chaldea.OpenHarmony.Workload --version 11.0.0-ohos.1-preview.1
 harmonyos-workload init
 dotnet workload install harmonyos --skip-manifest-update
 dotnet workload list
@@ -58,9 +61,9 @@ dotnet run
 dotnet publish
 ```
 
-模板中的 `App.Run()` 返回 `42`，默认页面显示执行结果及 `.NET 10` 运行时版本。
-项目使用标准 `Microsoft.NET.Sdk` 和 `<TargetFramework>net10.0-ohos</TargetFramework>`。
-HAP 输出在 `bin/Release/net10.0-ohos/linux-musl-x64/publish/`。
+模板中的 `App.Run()` 返回 `42`，默认页面显示执行结果及 `.NET 11` 运行时版本。
+项目使用标准 `Microsoft.NET.Sdk` 和 `<TargetFramework>net11.0-ohos</TargetFramework>`。
+HAP 输出在 `bin/Release/net11.0-ohos/linux-musl-x64/publish/`。
 
 运行 arm64 真机时，先连接设备，再选择架构：
 
@@ -139,17 +142,17 @@ jobs:
 
 ## 在应用中使用 SkiaSharp
 
-对于已经能构建的 `net10.0-ohos` workload 项目，添加`Chaldea.SkiaSharp.NativeAssets.HarmonyOS`包即可
+对于已经能构建的 `net11.0-ohos` workload 项目，添加`Chaldea.SkiaSharp.NativeAssets.HarmonyOS`包即可
 在项目中使用 SkiaSharp。该图形包是独立的nuget包，不随 workload 安装，直接添加到项目中即可。
 
 ```powershell
 dotnet new ohos -n SkiaApp
 cd SkiaApp
-dotnet add package Chaldea.SkiaSharp.NativeAssets.HarmonyOS
-dotnet add package Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS
+dotnet add package Chaldea.SkiaSharp.NativeAssets.HarmonyOS --version 11.0.0-ohos.1-preview.1
+dotnet add package Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS --version 11.0.0-ohos.1-preview.1
 ```
-所建项目为`<TargetFramework>net10.0-ohos</TargetFramework>`的项目，在该项目上直接添加对应的包引用即可。
-普通 `net10.0`、桌面或 MAUI 项目，需要添加一个 HarmonyOS 应用宿主，可先创建 `ohos` 项目，再引用的业务项目。
+所建项目为`<TargetFramework>net11.0-ohos</TargetFramework>`的项目，在该项目上直接添加对应的包引用即可。
+普通 `net11.0`、桌面或 MAUI 项目，需要添加一个 HarmonyOS 应用宿主，可先创建 `ohos` 项目，再引用的业务项目。
 
 在模板的 `App.cs` 替换为下面代码，可验证 Skia 的 CPU 绘制：
 
@@ -221,3 +224,4 @@ dotnet workload install harmonyos --skip-manifest-update
 - [workload 实现与验证记录](docs/ISSUE-002-validation.md)
 - [多平台 CI 与本机验证记录](docs/ISSUE-004-validation.md)
 - [运行时迁移与设备验证](docs/ISSUE-001-validation.md)
+- [.NET 11 与 SkiaSharp 升级验证](docs/ISSUE-006-validation.md)

@@ -10,7 +10,7 @@ public class Entry
     public unsafe static void RegisterEntryModule()
     {
         var tag = Marshal.StringToHGlobalAnsi("CSharp");
-        var msg = Marshal.StringToHGlobalAnsi("Hello CSharp");
+        var msg = Marshal.StringToHGlobalAnsi($"Hello CSharp; runtime={Environment.Version.Major}");
 
         Hilog.HiLogPrint(LogType.LOG_APP, LogLevel.LOG_ERROR, 0xFF00, (sbyte*)tag, (sbyte*)msg);
 

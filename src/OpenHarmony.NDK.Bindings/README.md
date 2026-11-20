@@ -1,8 +1,8 @@
-# OpenHarmony NDK Bindings (.NET 10)
+# OpenHarmony NDK Bindings (.NET 11)
 
 > 本组件已整合到 OpenHarmony 主仓库。请使用根目录的 `build.ps1` 和 `OpenHarmony.slnx`。
 
-本仓库面向 HarmonyOS 5.0/5.1/6.0/6.1/7 的 API13–24、26，绑定库目标框架为 .NET 10。SDK 基线清单位于 `src/OpenHarmony.NDK.Bindings/sdk-manifests/`，实际 SDK 根目录可通过 `--sdk-root` 指定。API16、17、19、21、22、24 没有可安装的独立 Native SDK，manifest 会明确记录为不可编译但保留为 emulator 目标。
+本仓库面向 HarmonyOS 5.0/5.1/6.0/6.1/7 的 API13–24、26，绑定库目标框架为 .NET 11。SDK 基线清单位于 `src/OpenHarmony.NDK.Bindings/sdk-manifests/`，实际 SDK 根目录可通过 `--sdk-root` 指定。API16、17、19、21、22、24 没有可安装的独立 Native SDK，manifest 会明确记录为不可编译但保留为 emulator 目标。
 
 ## 头文件清单与差分
 

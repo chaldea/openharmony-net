@@ -11,7 +11,7 @@ Microsoft.NETCore.Native.Publish.targets(59,5): error : Cross-OS native compilat
 
 This nuget package allows using [Zig](https://ziglang.org/) as the linker/sysroot to allow crosscompiling to linux-x64/linux-arm64/linux-musl-x64/linux-musl-arm64 from a Windows machine.
 
-## OpenHarmony and .NET 10
+## OpenHarmony and .NET 11
 
 Set `OpenHarmonyTarget=true` to use the official HarmonyOS SDK Clang/LLD
 toolchain instead of the legacy fakeclang/Zig path. API15 is the default

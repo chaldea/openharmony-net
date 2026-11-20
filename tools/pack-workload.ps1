@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$Version = '10.0.10-ohos.2-preview.1',
-    [ValidatePattern('^10\.0\.[0-9]00$')][string]$FeatureBand = '10.0.300',
+    [string]$Version = '11.0.0-ohos.1-preview.1',
+    [ValidatePattern('^11\.0\.[0-9]00$')][string]$FeatureBand = '11.0.100',
     [ValidateSet('Debug','Release')][string]$Configuration = 'Release',
     [switch]$NoBuild
 )

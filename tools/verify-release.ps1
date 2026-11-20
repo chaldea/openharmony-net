@@ -46,7 +46,7 @@ foreach ($path in @($manifestPath, $spdxPath, $sumsPath)) {
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 if ($manifest.schemaVersion -ne 2) { throw 'Runtime manifest schemaVersion must be 2.' }
-if ($manifest.version -ne '10.0.10-ohos.2-preview.1') { throw "Unexpected runtime version: $($manifest.version)" }
+if ($manifest.version -ne '11.0.0-ohos.1-preview.1') { throw "Unexpected runtime version: $($manifest.version)" }
 if ($manifest.runtimeBaselineApi -ne 13) { throw "Runtime baseline API must be 13, found $($manifest.runtimeBaselineApi)." }
 if ($manifest.runtimeCommit -notmatch '^[0-9a-f]{40}$' -or $manifest.bindingsCommit -notmatch '^[0-9a-f]{40}$') {
     throw 'Runtime and bindings commits must be full lowercase Git SHA-1 values.'

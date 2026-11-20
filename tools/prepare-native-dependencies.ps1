@@ -63,6 +63,19 @@ if errorlevel 1 exit /b %errorlevel%
             license=$manifest.icu.license; sdkApiLevel=15; sdkPackageVersion=$sdkManifest.version
             architecture=$arch; targetTriple=$triple
         } | ConvertTo-Json | Set-Content (Join-Path $icuBuild 'openharmony-icu-provenance.json') -Encoding ascii
+        # Refresh the libraries just built even when the version metadata matches
+        # an older staged build (for example after fixing compiler/linker flags).
+        $abi = if ($arch -eq 'x64') { 'x86_64' } else { 'arm64-v8a' }
+        $icuStaging = Join-Path $native "dependencies/icu/$abi/lib"
+        New-Item -ItemType Directory -Force -Path $icuStaging | Out-Null
+        foreach ($library in @('libicuuc.so.78', 'libicui18n.so.78', 'libicudata.so.78')) {
+            $builtLibrary = Join-Path $icuBuild "lib/$library"
+            $dynamic = & (Join-Path $SdkRoot '15/native/llvm/bin/llvm-readelf.exe') -d $builtLibrary
+            if ($LASTEXITCODE -ne 0 -or ($dynamic -join "`n") -match '\(RPATH\)|\(RUNPATH\)') {
+                throw "ICU must be built without a deployment RPATH/RUNPATH: $builtLibrary"
+            }
+            Copy-Item -LiteralPath $builtLibrary -Destination $icuStaging -Force
+        }
         & (Join-Path $RepoRoot 'dotnet/runtime/eng/openharmony/prepare-dependencies.ps1') `
             -SdkRoot $SdkRoot -Architecture $arch -Perl (Join-Path $gitLink 'usr/bin/perl.exe') `
             -Make (Join-Path $native 'msys/usr/bin/make.exe') -IcuBuildRoot $icuBuild `

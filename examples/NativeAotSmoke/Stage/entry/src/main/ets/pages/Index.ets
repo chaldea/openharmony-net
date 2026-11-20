@@ -23,7 +23,7 @@ struct Index {
       Text('OpenHarmony + .NET').fontSize(28).fontWeight(FontWeight.Bold)
       Text(`NativeAOT runtime: .NET ${this.version}`).fontSize(20)
       Text(`19 + 23 = ${this.result}`).fontSize(36)
-      Text(this.result === 42 && this.version === 10 ? '验证通过' : '验证失败').fontSize(24)
+      Text(this.result === 42 && this.version === 11 ? '验证通过' : '验证失败').fontSize(24)
       Button('再次运行 C#').onClick(() => this.runCheck())
       Text(`已运行 ${this.runs} 次`).fontSize(16)
     }.width('100%').height('100%').justifyContent(FlexAlign.Center).padding(24)

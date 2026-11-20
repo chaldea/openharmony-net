@@ -51,8 +51,8 @@ Python 3.12+ 和 Ninja，
 | `NUGET_KEY` | 能发布 catalog 中全部 `Chaldea.*` 包的 NuGet API key |
 
 工具包、runtime 包、图形 NativeAssets、manifest 和 bootstrap tool 使用同一个 NuGet 版本；manifest 不再
-固定为 `10.0.10`。版本来自 tag 去掉 `v`，或手动输入，支持稳定版和预览版。
-SDK feature band 固定为当前验证的 `10.0.300`；发布其它 band 前需同步 catalog、
+固定为基础 runtime 版本。版本来自 tag 去掉 `v`，或手动输入，支持稳定版和预览版。
+SDK feature band 固定为当前验证的 `11.0.100`；发布其它 band 前需同步 catalog、
 `Directory.Build.props`、打包参数和工具的支持版本，并完成验证。
 
 ## 发布顺序与验证
@@ -83,15 +83,15 @@ SDK feature band 固定为当前验证的 `10.0.300`；发布其它 band 前需�
 ```powershell
 ./build.ps1 -Target Test
 pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
-./build.ps1 -Target Pack -Version 10.0.10-ohos.2-preview.1
+./build.ps1 -Target Pack -Version 11.0.0-ohos.1-preview.1
 ./tools/verify-skia.ps1 -SdkRoot ./artifacts/native/sdk `
   -CommandLineTools $env:OHOS_COMMAND_LINE_TOOLS -JavaHome $env:JAVA_HOME -RunOnDevice
 ./tools/check-nuget-names.ps1 -OutputPath ./artifacts/nuget-name-check.json
 # 输出目录必须为空，防止混入旧制品。
-./tools/prepare-release.ps1 -Version 10.0.10-ohos.2-preview.1 -OutputDirectory ./artifacts/release-check
+./tools/prepare-release.ps1 -Version 11.0.0-ohos.1-preview.1 -OutputDirectory ./artifacts/release-check
 ```
 
-图形包随本仓库发行线编号，但分别精确依赖 SkiaSharp 2.88.9、HarfBuzzSharp 7.3.0.3。
+图形包随本仓库发行线编号，但分别精确依赖 SkiaSharp 4.157.0、HarfBuzzSharp 14.4.0.200。
 升级上游时须同步原生源码、托管依赖和 provenance 校验，重新执行模拟器渲染验收。
 图形库是可选 NuGet 扩展，不加入 workload 的四个必需 pack。
 
@@ -106,8 +106,8 @@ feature band；用户注册时无需再下载脚本或额外安装 PowerShell。
 
 ```powershell
 dotnet tool install Chaldea.OpenHarmony.Workload --tool-path ./artifacts/local-tools `
-  --add-source ./artifacts/packages --version 10.0.10-ohos.2-preview.1
-./artifacts/local-tools/harmonyos-workload init --dotnet-root ./artifacts/dotnet-sdk
+  --add-source ./artifacts/packages --version 11.0.0-ohos.1-preview.1
+./artifacts/local-tools/harmonyos-workload init --dotnet-root ./artifacts/dotnet-sdk11
 dotnet workload install harmonyos --source ./artifacts/packages --skip-manifest-update
 ```
 
@@ -120,3 +120,6 @@ dotnet workload install harmonyos --source ./artifacts/packages --skip-manifest-
 新工具检测同名 workload 冲突时会停止，不会覆盖其它 manifest。
 
 升级当前工具体系时：卸载 workload → 旧工具 unregister → 更新工具 → init → 安装 workload。
+
+从 .NET 10 升级时，使用独立的 .NET 11 SDK 注册新版 workload，并将应用目标框架改为
+`net11.0-ohos`。原 .NET 10 SDK 中的 workload 可以保留，两个 feature band 互不替代。

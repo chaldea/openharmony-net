@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <IsPackable>true</IsPackable>
-    <WorkloadFeatureBand Condition="'$(WorkloadFeatureBand)' == ''">10.0.300</WorkloadFeatureBand>
+    <WorkloadFeatureBand Condition="'$(WorkloadFeatureBand)' == ''">11.0.100</WorkloadFeatureBand>
     <PackageId>Chaldea.OpenHarmony.Workload.Manifest-$(WorkloadFeatureBand)</PackageId>
     <Authors>OpenHarmony.NET</Authors>
-    <Description>Workload manifest for the harmonyos .NET 10 workload.</Description>
+    <Description>Workload manifest for the harmonyos .NET 11 workload.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeBuildOutput>false</IncludeBuildOutput>

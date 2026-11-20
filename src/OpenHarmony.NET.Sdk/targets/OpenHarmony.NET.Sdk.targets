@@ -1,8 +1,8 @@
 <Project>
-  <UsingTask TaskName="OpenHarmony.NET.Sdk.ResolveSdk" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net10.0/OpenHarmony.NET.Sdk.dll" />
-  <UsingTask TaskName="OpenHarmony.NET.Sdk.WriteSettings" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net10.0/OpenHarmony.NET.Sdk.dll" />
-  <UsingTask TaskName="OpenHarmony.NET.Sdk.GenerateEntryPoint" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net10.0/OpenHarmony.NET.Sdk.dll" />
-  <UsingTask TaskName="OpenHarmony.NET.Sdk.WriteRunSettings" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net10.0/OpenHarmony.NET.Sdk.dll" />
+  <UsingTask TaskName="OpenHarmony.NET.Sdk.ResolveSdk" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net11.0/OpenHarmony.NET.Sdk.dll" />
+  <UsingTask TaskName="OpenHarmony.NET.Sdk.WriteSettings" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net11.0/OpenHarmony.NET.Sdk.dll" />
+  <UsingTask TaskName="OpenHarmony.NET.Sdk.GenerateEntryPoint" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net11.0/OpenHarmony.NET.Sdk.dll" />
+  <UsingTask TaskName="OpenHarmony.NET.Sdk.WriteRunSettings" AssemblyFile="$(OpenHarmonyWorkloadRoot)/tools/net11.0/OpenHarmony.NET.Sdk.dll" />
 
   <!-- Override the legacy resolver that builds a helper inside the package cache.
        Workload installations are read-only during application builds. -->

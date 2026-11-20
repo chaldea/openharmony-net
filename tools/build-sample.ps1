@@ -3,13 +3,12 @@ param(
     [Parameter(Mandatory=$true)][string]$SdkRoot,
     [Parameter(Mandatory=$true)][string]$CommandLineTools,
     [Parameter(Mandatory=$true)][string]$JavaHome,
-    [string]$RuntimeReleaseRoot,
+    [string]$Version = '11.0.0-ohos.1-preview.1',
     [int]$ApiLevel = 15
 )
 . (Join-Path $PSScriptRoot 'common.ps1')
-if (!$RuntimeReleaseRoot) { $RuntimeReleaseRoot = Join-Path $RepoRoot 'artifacts/runtime/releases/10.0.10-ohos.2-preview.1' }
 $sample = Join-Path $RepoRoot 'examples/NativeAotSmoke'
-$publish = Join-Path $RepoRoot 'artifacts/sample/publish'
+$publish = Join-Path $RepoRoot ('artifacts/sample/publish-' + [guid]::NewGuid().ToString('N').Substring(0,8))
 $stage = Join-Path $sample 'Stage'
 $oldJava = $env:JAVA_HOME
 $oldSdk = $env:DEVECO_SDK_HOME
@@ -17,9 +16,13 @@ $oldPath = $env:PATH
 try {
     Invoke-Checked dotnet @('publish',(Join-Path $sample 'NativeAotSmoke.csproj'),'-c','Release','-o',$publish,
         '-p:OpenHarmonyTarget=true','-p:OpenHarmonyAbi=x86_64',"-p:OpenHarmonyApiLevel=$ApiLevel",
-        "-p:OpenHarmonySdkRoot=$SdkRoot","-p:OpenHarmonyRuntimePackageRoot=$RuntimeReleaseRoot")
+        "-p:OpenHarmonySdkRoot=$SdkRoot","-p:OpenHarmonyPackageVersion=$Version",
+        "-p:RestoreAdditionalProjectSources=$RepoRoot/artifacts/packages",
+        "-p:RestorePackagesPath=$RepoRoot/artifacts/sample/packages-$([guid]::NewGuid().ToString('N'))")
     $libs = Join-Path $stage 'entry/libs/x86_64'
     New-Item -ItemType Directory -Force -Path $libs | Out-Null
+    Get-ChildItem -LiteralPath $libs -File | Where-Object Name -Match '\.so(\.|$)' |
+        ForEach-Object { Remove-Item -LiteralPath $_.FullName }
     Get-ChildItem -LiteralPath $publish -File | Where-Object { $_.Name -match '\.so(\.|$)' } |
         Copy-Item -Destination $libs -Force
     $env:JAVA_HOME = $JavaHome
@@ -28,6 +31,7 @@ try {
     Push-Location $stage
     try {
         Invoke-Checked (Join-Path $CommandLineTools 'bin/ohpm.bat') @('install')
+        Invoke-Checked (Join-Path $CommandLineTools 'bin/hvigorw.bat') @('clean','--no-daemon')
         Invoke-Checked (Join-Path $CommandLineTools 'bin/hvigorw.bat') @('--mode','module','-p','product=default',
             '-p','module=entry@default','-p','buildMode=debug','assembleHap','--no-daemon')
     }
