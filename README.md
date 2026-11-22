@@ -44,6 +44,10 @@ dotnet workload list
 随后由 `dotnet workload install` 从 NuGet 下载 SDK、模板和两个架构的运行时包。
 工具版本与这些依赖版本一致。注册不依赖 Harmony SDK，应用构建时才检查 SDK 是否齐全。
 
+同一 SDK feature band 的补丁版发布到包源后，在原来的独立 SDK 环境中运行
+`dotnet workload update` 即可原地升级。用 `dotnet workload list` 确认 `harmonyos`
+的 manifest 版本。原地升级可以继续使用首次注册时安装的 `harmonyos-workload` 工具。
+
 ### 3. 创建和运行应用
 
 ```powershell
@@ -146,8 +150,8 @@ jobs:
 ```powershell
 dotnet new ohos -n SkiaApp
 cd SkiaApp
-dotnet add package Chaldea.SkiaSharp.NativeAssets.HarmonyOS --version 11.0.0-ohos.1-preview.1
-dotnet add package Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS --version 11.0.0-ohos.1-preview.1
+dotnet add package Chaldea.SkiaSharp.NativeAssets.HarmonyOS --version 11.0.0
+dotnet add package Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS --version 11.0.0
 ```
 所建项目为`<TargetFramework>net11.0-ohos</TargetFramework>`的项目，在该项目上直接添加对应的包引用即可。
 普通 `net11.0`、桌面或 MAUI 项目，需要添加一个 HarmonyOS 应用宿主，可先创建 `ohos` 项目，再引用的业务项目。

@@ -4,7 +4,7 @@
 `Chaldea.SkiaSharp.NativeAssets.HarmonyOS` 和 `Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS`。
 源码目录、程序集名、C# 命名空间及
 `OpenHarmony*` MSBuild 属性保持原有命名；NuGet 自动导入的 props/targets 文件在打包时
-改为与新包名一致。完整十二个包以 `tools/release-packages.json` 为准。
+改为与新包名一致。完整发布包集合以 `tools/release-packages.json` 为准。
 
 ## 名称检查
 
@@ -25,7 +25,7 @@ repository URL 中指向本仓库，否则失败；网络或服务端错误也�
 ## Runner 和 secrets
 
 没有专用 runner 时，可使用 `.github/workflows/publish-prepared.yml`：先在已配置的开发主机
-从 release tag 构建并完成本文验证，将十二个 nupkg 和 SHA256SUMS 上传为该 GitHub Release
+从 release tag 构建并完成本文验证，将发布包和 SHA256SUMS 上传为该 GitHub Release
 的附件，然后手动运行 **Publish validated release assets**，输入 tag。它在 GitHub 托管
 Windows runner 上重新检查哈希、包集合、内部依赖和与 tag 一致的源码 revision，再使用
 同一组 NuGet secrets 发布；不会重新执行原生编译或替代本地 HAP 验收。
@@ -61,13 +61,13 @@ SDK feature band 固定为当前验证的 `11.0.100`；发布其它 band 前需�
 1. 下载与所选提交匹配的 x64/arm64 NativeAOT 基线，核对 SHA-256 和 provenance。
    发布 tag 前应已上传对应的基线 Release，见 [项目维护](maintainers.md#维护)。
 2. 检查 NuGet 名称，构建解决方案，运行单元测试，准备官方 API15 Native SDK。
-3. 使用 API15 编译 x64/arm64 SkiaSharp 和 HarfBuzzSharp，打包十二个制品；验证 Player.Sdk
+3. 使用 API15 编译 x64/arm64 SkiaSharp 和 HarfBuzzSharp，打包发布制品；验证 Player.Sdk
    依赖及原生导出，以及使用新图形包生成的两个 SkiaDemo HAP。
 4. 安装一次性 .NET SDK，从本地源安装 dotnet tool，验证 init、workload 安装/卸载/恢复、
    x64 和 arm64 HAP。CI 不要求模拟器；设备运行由维护者额外验收。
 5. `prepare-release.ps1` 检查全部包的 ID、版本、仓库、内部依赖、manifest、runtime provenance；
    同时验证图形库两种 ABI 的 ELF、哈希、固定源码 revision、托管 API 版本及许可证文件。
-   只把 catalog 中的十二个包复制到空的 release 目录，生成 SHA256SUMS。
+   只把 catalog 中的包复制到空的 release 目录，生成 SHA256SUMS。
 6. 上传供 publish job 消费的 `nuget-release`，保留 1 天；不额外上传验证日志或测试报告。
    publish job 验证 SHA-256，按 pack → manifest → bootstrap tool 顺序调用
    `dotnet nuget push --source ... --api-key ... --skip-duplicate`。超过保留期后需重新构建，
@@ -119,7 +119,9 @@ dotnet workload install harmonyos --source ./artifacts/packages --skip-manifest-
 `sdk-manifests/10.0.300/openharmony.net.workload/10.0.10` 旧注册目录，然后运行新工具 init。
 新工具检测同名 workload 冲突时会停止，不会覆盖其它 manifest。
 
-升级当前工具体系时：卸载 workload → 旧工具 unregister → 更新工具 → init → 安装 workload。
+同一 SDK feature band 的补丁更新使用 `dotnet workload update`。新版 manifest 和 packs
+可从配置的 NuGet 源下载后，在已安装 workload 的独立 SDK 环境中执行该命令，再用
+`dotnet workload list` 核对版本。注册工具用于首次安装和移除 manifest 注册。
 
 从 .NET 10 升级时，使用独立的 .NET 11 SDK 注册新版 workload，并将应用目标框架改为
 `net11.0-ohos`。原 .NET 10 SDK 中的 workload 可以保留，两个 feature band 互不替代。

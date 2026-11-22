@@ -10,7 +10,7 @@ ZIP/tarball or dotnet-install; MSI-managed SDKs cannot install these file-based
 workload packs. Select the standalone SDK with PATH before running:
 
 ```powershell
-dotnet tool install -g Chaldea.OpenHarmony.Workload --prerelease
+dotnet tool install -g Chaldea.OpenHarmony.Workload --version 11.0.0
 harmonyos-workload init
 dotnet workload install harmonyos --skip-manifest-update
 dotnet new ohos -n HelloHarmony
@@ -21,8 +21,9 @@ SDK's `dotnet` for workload and application commands. `init` checks the selected
 feature band, rejects conflicting manifests, and enables manifest update mode
 through the CLI. It does not download the HarmonyOS SDK or install workload packs.
 
-Before switching tool versions, uninstall harmonyos and run
-`harmonyos-workload unregister`. Then update the tool, initialize its manifest,
-and install harmonyos again. Repeating `init` for the same manifest is safe.
+For patch releases within the same SDK feature band, run `dotnet workload update`
+after the new manifest and packs are available from your configured NuGet source.
+Check the active manifest version with `dotnet workload list`. The bootstrap tool
+is only needed for initial registration or explicit removal of the registration.
 
 Project: https://github.com/chaldea/openharmony-net
