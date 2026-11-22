@@ -5,11 +5,8 @@
 
 ## 快速开始
 
-以下展示 NuGet 安装流程，发布后不需要克隆或构建本仓库。当前发行线为预览版；
-包名统一使用 `Chaldea.OpenHarmony.*`。可用版本见 [NuGet 工具包页面](https://www.nuget.org/packages/Chaldea.OpenHarmony.Workload)。
-
-本次 .NET 11 升级版本为 `11.0.0-ohos.1-preview.1`。发布到 NuGet 前，请按
-[维护说明](docs/maintainers.md) 构建并使用本地 `artifacts/packages` 源安装和验证。
+以下展示 `11.0.0` 正式版的 NuGet 安装流程。可用版本见
+[NuGet 工具包页面](https://www.nuget.org/packages/Chaldea.OpenHarmony.Workload)。
 
 ### 1. 准备环境
 
@@ -37,7 +34,7 @@ Test-Path "$env:JAVA_HOME\bin\java.exe"
 ### 2. 安装 workload
 
 ```powershell
-dotnet tool install -g Chaldea.OpenHarmony.Workload --version 11.0.0-ohos.1-preview.1
+dotnet tool install -g Chaldea.OpenHarmony.Workload --version 11.0.0
 harmonyos-workload init
 dotnet workload install harmonyos --skip-manifest-update
 dotnet workload list
