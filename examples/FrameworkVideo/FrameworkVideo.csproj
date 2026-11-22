@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OpenHarmonyPackageVersion>11.0.0-ohos.1-preview.1</OpenHarmonyPackageVersion>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(OpenHarmonyTarget)' != 'true'">
+    <ProjectReference Include="../../src/OpenHarmony.Framework/OpenHarmony.Framework.csproj" />
+  </ItemGroup>
+  <ItemGroup><EmbeddedResource Include="sample.mp4" /></ItemGroup>
+  <PropertyGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+    <PublishAot>true</PublishAot>
+    <NativeLib>Shared</NativeLib>
+    <SelfContained>true</SelfContained>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <OpenHarmonySurface>true</OpenHarmonySurface>
+    <OpenHarmonyBundleName>org.openharmony.frameworkvideo</OpenHarmonyBundleName>
+    <OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == ''">x86_64</OpenHarmonyAbi>
+    <RuntimeIdentifier Condition="'$(OpenHarmonyAbi)' == 'x86_64'">linux-musl-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(OpenHarmonyAbi)' == 'arm64-v8a'">linux-musl-arm64</RuntimeIdentifier>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(OpenHarmonyTarget)' == 'true'">
+    <PackageReference Include="Chaldea.OpenHarmony.Player.Sdk" Version="$(OpenHarmonyPackageVersion)" />
+  </ItemGroup>
+</Project>

@@ -61,8 +61,9 @@ dotnet run
 dotnet publish
 ```
 
-模板中的 `App.Run()` 返回 `42`，默认页面显示执行结果及 `.NET 11` 运行时版本。
 项目使用标准 `Microsoft.NET.Sdk` 和 `<TargetFramework>net11.0-ohos</TargetFramework>`。
+该 TFM 自动引用 OpenHarmony Framework。模板通过 `SurfaceApplication` 启动
+`SurfaceView`，并用 OpenGL ES 绘制蓝色背景。[Framework 用法](src/OpenHarmony.Framework/README.md)
 HAP 输出在 `bin/Release/net11.0-ohos/linux-musl-x64/publish/`。
 
 运行 arm64 真机时，先连接设备，再选择架构：
@@ -92,14 +93,14 @@ dotnet publish -p:OpenHarmonyAbi=arm64-v8a
 | `OpenHarmonyAbi` | `x86_64` 或 `arm64-v8a`；默认 x86_64 |
 | `OpenHarmonyDevice` | HDC 目标；只有一个连接时自动选择 |
 | `OpenHarmonyBundleName` | 应用包名；默认由项目名派生 |
-| `OpenHarmonyEntryPoint` | 静态 C# `int` 入口方法；默认 `App.Run` |
+| `OpenHarmonySurface` | 启用 Framework 渲染宿主；`dotnet new ohos` 生成的项目默认启用 |
+| `OpenHarmonyEntryPoint` | 使用旧版 Stage 宿主时的静态 C# `int` 入口方法，默认为 `App.Run` |
 | `OpenHarmonySdkRoot` | 可选独立 Native SDK 根目录；默认 `OHOS_SDK_ROOT` |
 | `OpenHarmonyApiLevel` | Native SDK API；只有一个 SDK 时从 manifest 推导 |
 | `OpenHarmonySignedHapPath` | 用于安装运行的已签名 HAP |
 
 最低应用平台为 API15，CLI 的编译 SDK 可以是更高版本；同时安装多个 Native SDK 时需
-显式选择 API。缺少 SDK 会报告 `OHOS1001` 并提示配置路径。当前模板提供最小 Stage
-应用壳，不包含 MAUI UI。
+显式选择 API。缺少 SDK 会报告 `OHOS1001` 并提示配置路径。
 
 ## CI 集成：GitHub Actions 发布示例
 
@@ -154,7 +155,8 @@ dotnet add package Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS --version 11.0.0
 所建项目为`<TargetFramework>net11.0-ohos</TargetFramework>`的项目，在该项目上直接添加对应的包引用即可。
 普通 `net11.0`、桌面或 MAUI 项目，需要添加一个 HarmonyOS 应用宿主，可先创建 `ohos` 项目，再引用的业务项目。
 
-在模板的 `App.cs` 替换为下面代码，可验证 Skia 的 CPU 绘制：
+此 CPU 绘制示例使用 `App.Run()` 桥接。先将项目文件中的
+`<OpenHarmonySurface>` 设为 `false`，再用下面的代码替换 `App.cs`。
 
 ```csharp
 using SkiaSharp;
@@ -174,7 +176,7 @@ public static class App
 ```
 
 ```powershell
-# x86_64 模拟器：默认页面显示返回值 1，表示像素检查通过。
+# x86_64 模拟器上的 Stage 页面显示返回值 1，表示像素检查通过。
 dotnet run
 
 # 发布 arm64 真机用 HAP。

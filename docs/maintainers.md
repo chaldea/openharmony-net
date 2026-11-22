@@ -138,26 +138,49 @@ HAP 输出至 `artifacts/sample/`。本机 SDK/Java 路径通过参数提供，�
 `test` 使用 Windows、Ubuntu、macOS 矩阵下载同一制品，按 `global.json` 中的精确版本
 安装独立的可写 .NET SDK（避免 `latestFeature` 切换到不匹配的 workload feature band）、
 JDK 17 和 `ErBWs/setup-ohos@v2` 提供的 HarmonyOS CLI 6.1.1.280；Ubuntu 额外安装
-`libgl1`。CLI 根目录由 action 的 `HOS_SDK_HOME` 推导，先通过 `hvigorw -v` 检查。
+`libgl1`。Linux 和 macOS 直接从 `ErBWs/ohos-sdk` 的 GitHub Release 下载、校验并解压，
+省去 Actions cache 的归档和上传。Windows 安装耗时更长，可以恢复由默认分支共享的
+已解压 `command-line-tools` 目录。维护者可在默认分支手动运行 **Build and test** 来填充
+当前 CLI 版本的 Windows 缓存；PR 仅恢复这个缓存，未命中时从上游 Release 安装。
+缓存中只有 Windows CLI 目录，源 ZIP 留在 runner 的临时磁盘上。CLI 根目录由 action 的
+`HOS_SDK_HOME` 推导，先通过 `hvigorw -v` 检查。
 每个平台从制品安装工具和 workload，实际执行 `dotnet new ohos`、build、两种 ABI 的
 publish，检查 HAP 内原生库的 ELF 架构，并验证卸载和 workload restore。
 测试 job 不上传 HAP、日志或测试报告；结果（含 HAP 哈希）写入 job 日志。
 预期失败场景验证通过后显示 `PASS: negative test`，只有实际异常才打印原始失败日志并
 终止任务。某个平台失败不会取消其他平台。
 
-PR 制品中的八个托管/工具包由当前源码构建。当前 .NET 11 基线尚未发布，
-`tools/ci-runtime-packages.json` 设置 `buildFromSource: true`；Windows job 会获取固定的
-runtime 子模块、准备 API13/API15 SDK 和依赖，并用 `build.ps1 -Target PackRuntime`
-生成两个原生包。`tools/prepare-ci-packages.ps1` 验证版本、源码提交和干净构建 provenance，
-再组成 `artifacts/ci-packages/`。NativeAOT 的可复用输出按 runtime 子模块提交、SDK
-catalog、依赖清单和构建脚本哈希存入 GitHub Actions cache。命中缓存时跳过 Native SDK、
-ICU/OpenSSL 和两个 ABI 的 runtime 编译，但仍执行 `PackRuntime`，用当前主仓库提交重新
-生成 manifest 和两个包；runtime 子模块或这些构建输入变化时才会重新编译。首次构建或
-缓存失效时会比托管构建耗时更长。
-发布后可将 `buildFromSource` 改为 false，填入 NuGet 下载包（含仓库签名）的 SHA-256，
-以复用正式基线；不能使用本地 nupkg 的哈希替代。不得用 .NET 10 原生包验证 .NET 11。
-本地复现先构建运行时，执行 `PackTools`、`PackRuntime` 和 `tools/prepare-ci-packages.ps1`，再给下面的
-`verify-workload.ps1` 传入 `-PackageSource ./artifacts/ci-packages`。
+PR 制品中的托管和工具包由当前源码构建。`tools/ci-runtime-packages.json` 中的
+`buildFromSource: true` 表示使用从固定源码构建的 runtime 基线。PR 和 tag 发布从同一份
+GitHub Release 下载基线，在当前主仓库提交上重新生成 manifest 和两个 NuGet 包。
+`tools/prepare-ci-packages.ps1` 核对版本、runtime 源码提交和干净构建 provenance，再组成
+`artifacts/ci-packages/`。GitHub Actions 在 PR 中保存的缓存属于 `refs/pull/<n>/merge`，
+其他 PR 和 tag 发布无法恢复该缓存。基线 Release 可以跨这些引用下载，也独立于 Actions
+cache 配额及工作流制品保留期。
+
+Runtime 提交或 SDK、原生依赖构建输入变化时，维护者在有原生工具链的 Windows 主机上
+按「从源码构建运行时」一节生成新基线。已完成同一构建的原生产物可直接导出。
+以下命令在对应主仓库提交的工作目录执行，并将 `--repo` 指向 CI 使用的仓库。
+
+```powershell
+$tag = ./tools/runtime-baseline.ps1 -Action GetTag
+./tools/runtime-baseline.ps1 -Action Export
+$assets = "./artifacts/runtime-baselines/$tag"
+gh release create $tag "$assets/runtime.zip" "$assets/runtime.zip.sha256" `
+  --repo chaldea/openharmony-net --prerelease --latest=false `
+  --title "NativeAOT runtime baseline $tag" --notes 'API13 NativeAOT build outputs for x64 and arm64.'
+```
+
+`runtime-` tag 包含 runtime 子模块提交和构建输入指纹。同一基线供所有 workload 版本复用。
+发布资产后重跑对应的 PR 或 tag 工作流。CI 默认读取自身仓库的 Release；fork 可将
+Actions 变量 `RUNTIME_BASELINE_REPOSITORY` 设为存放基线的公开仓库，例如
+`chaldea/openharmony-net`。缺少基线、校验和不匹配或 provenance 不符时，CI 会报错。
+
+也可以将 `buildFromSource` 改为 `false`，在 CI 配置中填入从 NuGet 下载的同版本签名包的
+SHA-256。本地复现可构建或恢复基线，执行 `PackTools`、`PackRuntime` 和
+`tools/prepare-ci-packages.ps1`，再给下面的 `verify-workload.ps1` 传入
+`-PackageSource ./artifacts/ci-packages`。使用恢复目录时，将其作为 `PackRuntime` 的
+`-RuntimeArtifacts` 参数传入。
 
 原生 runtime 编译、签名和设备验收需要安装 Harmony 工具链的 Windows 主机。
 

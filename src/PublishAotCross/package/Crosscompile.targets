@@ -217,6 +217,18 @@
 		</ItemGroup>
 	</Target>
 
+	<!-- Publish may run ConfigureOpenHarmonyNativeAot before SetupOSSpecificProps
+	     populates DirectPInvoke. Filter immediately before the ILC response is written:
+	     doing this only before linking leaves eager, unresolved NetSecurityNative_* imports
+	     in applications that use HttpClient (HarmonyOS has no GSS/Kerberos shim). -->
+	<Target Name="ConfigureOpenHarmonyDirectPInvokes"
+			BeforeTargets="WriteIlcRspFileForCompilation"
+			Condition="'$(OpenHarmonyTarget)' == 'true'">
+		<ItemGroup>
+			<DirectPInvoke Remove="System.Net.Security.Native" />
+		</ItemGroup>
+	</Target>
+
 	<Target Name="RemoveOpenHarmonyUnavailableNativeLibraries"
 			AfterTargets="IlcCompile"
 			BeforeTargets="LinkNative"

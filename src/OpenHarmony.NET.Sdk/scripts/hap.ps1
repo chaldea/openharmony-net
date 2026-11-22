@@ -48,6 +48,7 @@ try {
         Require-File $hvigor 'Install the official HarmonyOS command-line tools.'
         $stage = Join-Path $settings.WorkDirectory 'Stage'
         $template = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../templates/Stage'))
+        if ($settings.StageTemplate) { $template = [IO.Path]::GetFullPath($settings.StageTemplate) }
         foreach ($file in Get-ChildItem -LiteralPath $template -Recurse -File) {
             $relative = $file.FullName.Substring($template.Length).TrimStart('\', '/')
             $destination = Join-Path $stage $relative

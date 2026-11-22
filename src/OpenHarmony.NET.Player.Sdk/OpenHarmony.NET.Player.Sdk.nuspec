@@ -9,6 +9,7 @@
     <repository type="git" url="https://github.com/chaldea/openharmony-net" />
     <readme>README.md</readme>
     <dependencies>
+      <dependency id="Chaldea.OpenHarmony.Framework" version="[$version$]" />
       <dependency id="Chaldea.OpenHarmony.PublishAotCross" version="[$version$]" />
       <dependency id="Chaldea.OpenHarmony.Runtime.NativeAot.arm64-v8a" version="[$version$]" />
       <dependency id="Chaldea.OpenHarmony.Runtime.NativeAot.x86_64" version="[$version$]" />

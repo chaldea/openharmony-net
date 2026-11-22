@@ -33,9 +33,6 @@ jobs:
       sdk-version: ${{ steps.version.outputs.sdk }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
       - name: Resolve workload version
         id: version
         run: |
@@ -45,44 +42,28 @@ jobs:
           "sdk=$((Get-Content -Raw global.json | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT
           "WORKLOAD_VERSION=$version" >> $env:GITHUB_ENV
           "build-runtime=$((Get-Content -Raw tools/ci-runtime-packages.json | ConvertFrom-Json).buildFromSource -eq $true)" >> $env:GITHUB_OUTPUT
-      - name: Check runtime sources and the stable build SDK
-        id: runtime
+      - name: Download the pinned NativeAOT runtime baseline
         if: steps.version.outputs.build-runtime == 'True'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNTIME_BASELINE_REPOSITORY: ${{ vars.RUNTIME_BASELINE_REPOSITORY || github.repository }}
+        run: ./tools/runtime-baseline.ps1 -Action Restore -Repository $env:RUNTIME_BASELINE_REPOSITORY
+      - name: Check out the runtime SDK catalog
         run: |
-          git submodule update --init dotnet/runtime
+          git submodule update --init --depth 1 dotnet/runtime
           if ($LASTEXITCODE -ne 0) { throw 'Runtime checkout failed.' }
-          ./tools/resolve-runtime-sdk.ps1
-          "commit=$((git -C dotnet/runtime rev-parse HEAD).Trim())" >> $env:GITHUB_OUTPUT
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
       - name: Build and test the unified solution
         run: ./build.ps1 -Target Test -Version $env:WORKLOAD_VERSION
       - name: Package managed and build tools
-        run: ./build.ps1 -Target PackTools -Version $env:WORKLOAD_VERSION
-      - name: Restore cached NativeAOT runtime baseline
-        id: runtime-cache
+        run: |
+          ./tools/install-native-sdk.ps1 -ApiLevels 15
+          ./build.ps1 -Target PackTools -Version $env:WORKLOAD_VERSION -FrameworkNativeSdk ./artifacts/native/sdk/15/native
+      - name: Package the NativeAOT runtime baseline for this workload version
         if: steps.version.outputs.build-runtime == 'True'
-        uses: actions/cache@v4
-        with:
-          path: |
-            artifacts/native/runtime/api13/x64/Release/bin/coreclr/openharmony.x64.Release
-            artifacts/native/runtime/api13/x64/Release/bin/microsoft.netcore.app.runtime.linux-musl-x64
-            artifacts/native/runtime/api13/x64/Release/runtime-build-provenance.json
-            artifacts/native/runtime/api13/arm64/Release/bin/coreclr/openharmony.arm64.Release
-            artifacts/native/runtime/api13/arm64/Release/bin/microsoft.netcore.app.runtime.linux-musl-arm64
-            artifacts/native/runtime/api13/arm64/Release/runtime-build-provenance.json
-          key: runtime-${{ runner.os }}-${{ steps.runtime.outputs.commit }}-${{ hashFiles('global.json', 'tools/build-runtime.ps1', 'tools/prepare-native-dependencies.ps1', 'tools/ci-runtime-packages.json', 'dotnet/runtime/eng/openharmony/sdk-catalog.json', 'dotnet/runtime/eng/openharmony/dependencies.json') }}
-      - name: Prepare native SDKs and dependencies
-        if: steps.version.outputs.build-runtime == 'True' && steps.runtime-cache.outputs.cache-hit != 'true'
-        run: |
-          ./tools/install-native-sdk.ps1
-          ./tools/prepare-native-dependencies.ps1 -SdkRoot ./artifacts/native/sdk
-      - name: Build and package the unpublished runtime baseline from source
-        if: steps.version.outputs.build-runtime == 'True' && steps.runtime-cache.outputs.cache-hit != 'true'
-        run: |
-          ./tools/build-runtime.ps1 -SdkRoot ./artifacts/native/sdk
-          ./build.ps1 -Target PackRuntime -Version $env:WORKLOAD_VERSION
-      - name: Package the runtime baseline from the cached build
-        if: steps.version.outputs.build-runtime == 'True' && steps.runtime-cache.outputs.cache-hit == 'true'
-        run: ./build.ps1 -Target PackRuntime -Version $env:WORKLOAD_VERSION
+        run: ./build.ps1 -Target PackRuntime -Version $env:WORKLOAD_VERSION -RuntimeArtifacts ./artifacts/runtime-baseline
       - name: Complete the workload feed with pinned native runtime packages
         run: ./tools/prepare-ci-packages.ps1
       - uses: actions/upload-artifact@v4
@@ -110,6 +91,7 @@ jobs:
       # Isolate file-based workload installation from preinstalled SDKs and MSI.
       DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-sdk
       WORKLOAD_VERSION: ${{ needs.build.outputs.version }}
+      HARMONYOS_CLI_VERSION: '6.1.1.280'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -135,11 +117,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1
+      - name: Restore the shared Windows HarmonyOS CLI
+        if: runner.os == 'Windows'
+        id: windows-ohos-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/ohos-sdk/command-line-tools
+          key: windows-ohos-cli-${{ runner.arch }}-${{ env.HARMONYOS_CLI_VERSION }}
       - name: Setup HarmonyOS CLI tools
         uses: ErBWs/setup-ohos@v2
         with:
-          version: 6.1.1.280
-          cache: true
+          version: ${{ env.HARMONYOS_CLI_VERSION }}
+          # setup-ohos caches the whole download directory, including its multi-GB source archive.
+          cache: false
       - name: Check the HarmonyOS toolchain
         run: |
           $cli = Split-Path $env:HOS_SDK_HOME -Parent
@@ -148,6 +138,15 @@ jobs:
           "OHOS_COMMAND_LINE_TOOLS=$cli" >> $env:GITHUB_ENV
           hvigorw -v
           if ($LASTEXITCODE -ne 0) { throw 'Hvigor is unavailable.' }
+      - name: Seed the default branch Windows HarmonyOS CLI cache
+        if: >-
+          runner.os == 'Windows' && steps.windows-ohos-cache.outputs.cache-hit != 'true' &&
+          github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch &&
+          github.ref_type == 'branch'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/ohos-sdk/command-line-tools
+          key: ${{ steps.windows-ohos-cache.outputs.cache-primary-key }}
       - name: Install workload, create an app and publish both HAP architectures
         run: |
           ./tools/verify-workload.ps1 -DotnetRoot $env:DOTNET_INSTALL_DIR `

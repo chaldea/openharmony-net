@@ -34,6 +34,7 @@
     <IlcSdkPath>$(OpenHarmonyRuntimePackPath)/sdk/</IlcSdkPath>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Chaldea.OpenHarmony.Framework" Version="$(OpenHarmonyWorkloadVersion)" IsImplicitlyDefined="true" />
     <SupportedPlatform Include="ohos" />
     <SdkSupportedTargetPlatformVersion Include="15.0" />
   </ItemGroup>

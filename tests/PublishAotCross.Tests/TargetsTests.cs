@@ -164,4 +164,52 @@ public sealed class TargetsTests
         }
         finally { Directory.Delete(root, recursive: true); }
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task IlcResponseExcludesUnavailableGssOnlyForHarmonyOS(bool harmony)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "ohos-pinvoke-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string project = Path.Combine(root, "probe.proj");
+            string output = Path.Combine(root, "pinvokes.txt");
+            string targets = Path.Combine(RepositoryRoot, "package", "Crosscompile.targets");
+            File.WriteAllText(project, $$"""
+                <Project>
+                  <PropertyGroup><OpenHarmonyTarget>{{harmony.ToString().ToLowerInvariant()}}</OpenHarmonyTarget></PropertyGroup>
+                  <Import Project="{{SecurityElement.Escape(targets)}}" />
+                  <!-- Simulate SDK setup adding direct imports after the early platform setup. -->
+                  <Target Name="PopulateNativeImports">
+                    <ItemGroup>
+                      <DirectPInvoke Include="System.Native;System.Net.Security.Native;System.Security.Cryptography.Native.OpenSsl" />
+                    </ItemGroup>
+                  </Target>
+                  <Target Name="WriteIlcRspFileForCompilation" DependsOnTargets="PopulateNativeImports">
+                    <WriteLinesToFile File="{{SecurityElement.Escape(output)}}" Lines="@(DirectPInvoke)" Overwrite="true" />
+                  </Target>
+                </Project>
+                """);
+            var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
+            {
+                RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false
+            };
+            foreach (string argument in new[] { "msbuild", project, "-t:WriteIlcRspFileForCompilation", "-nologo", "-v:minimal" })
+                start.ArgumentList.Add(argument);
+            using var process = Process.Start(start)!;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            try { await process.WaitForExitAsync(timeout.Token); }
+            finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+            Assert.True(process.ExitCode == 0, await stdout + await stderr);
+            string[] imports = File.ReadAllLines(output);
+            Assert.Contains("System.Native", imports);
+            Assert.Contains("System.Security.Cryptography.Native.OpenSsl", imports);
+            Assert.Equal(!harmony, imports.Contains("System.Net.Security.Native"));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
 }

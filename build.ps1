@@ -4,7 +4,8 @@ param(
     [ValidateSet('Debug','Release')][string]$Configuration = 'Release',
     [string]$Version = '11.0.0-ohos.1-preview.1',
     [string]$RuntimeArtifacts,
-    [string]$SdkCatalog
+    [string]$SdkCatalog,
+    [string]$FrameworkNativeSdk = $env:OHOS_NATIVE_HOME
 )
 . (Join-Path $PSScriptRoot 'tools/common.ps1')
 Push-Location $RepoRoot
@@ -20,6 +21,13 @@ try {
             '--logger','trx','--results-directory','artifacts/test-results')
     }
     if ($Target -in @('PackTools','Pack')) {
+        if (!$FrameworkNativeSdk -and $env:OHOS_COMMAND_LINE_TOOLS) {
+            $FrameworkNativeSdk = Join-Path $env:OHOS_COMMAND_LINE_TOOLS 'sdk/default/openharmony/native'
+        }
+        if (!$FrameworkNativeSdk -and (Test-Path (Join-Path $RepoRoot 'artifacts/native/sdk/15/native'))) {
+            $FrameworkNativeSdk = Join-Path $RepoRoot 'artifacts/native/sdk/15/native'
+        }
+        & (Join-Path $PSScriptRoot 'tools/build-framework-native.ps1') -NativeSdk $FrameworkNativeSdk
         # NuGet's timestamp check does not notice a changed Git revision.
         $catalog = Get-Content -Raw (Join-Path $RepoRoot 'tools/release-packages.json') | ConvertFrom-Json
         foreach ($id in $catalog.packages) {
@@ -29,6 +37,7 @@ try {
         }
         foreach ($project in @(
             'src/OpenHarmony.NDK.Bindings/OpenHarmony.NDK.Bindings.csproj',
+            'src/OpenHarmony.Framework/OpenHarmony.Framework.csproj',
             'src/PublishAotCross/package/OpenHarmony.NET.PublishAotCross.csproj',
             'src/OpenHarmony.NET.HapTooling/OpenHarmony.NET.HapTooling.csproj',
             'src/OpenHarmony.NET.Player.Sdk/OpenHarmony.NET.Player.Sdk.csproj'
@@ -36,6 +45,7 @@ try {
             Invoke-Checked dotnet (@('pack',$project,'-c',$Configuration,'--no-build','--nologo') + $properties)
         }
         & (Join-Path $PSScriptRoot 'tools/pack-workload.ps1') -Version $Version -Configuration $Configuration -NoBuild
+        & (Join-Path $PSScriptRoot 'tools/verify-framework-package.ps1') -Version $Version
     }
     if ($Target -eq 'Pack') {
         foreach ($project in @('SkiaSharp.NativeAssets.HarmonyOS','HarfBuzzSharp.NativeAssets.HarmonyOS')) {

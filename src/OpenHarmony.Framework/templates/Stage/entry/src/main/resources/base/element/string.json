@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "@ASSEMBLY_NAME@ on HarmonyOS"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "@ASSEMBLY_NAME@"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "@ASSEMBLY_NAME@"
+    }
+  ]
+}

@@ -31,7 +31,10 @@
     <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(OpenHarmonyBundleName)', '^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$'))" Text="OpenHarmonyBundleName must be a dotted application identifier." />
   </Target>
 
-  <Target Name="PrepareOpenHarmonyApplication" BeforeTargets="CoreCompile" DependsOnTargets="ValidateOpenHarmonyResolvedSdk">
+  <Target Name="PrepareOpenHarmonyApplication" BeforeTargets="CoreCompile"
+          DependsOnTargets="ValidateOpenHarmonyResolvedSdk;GenerateOpenHarmonyApplicationEntryPoint" />
+
+  <Target Name="GenerateOpenHarmonyApplicationEntryPoint" Condition="'$(OpenHarmonySurface)' != 'true'">
     <PropertyGroup>
       <_OpenHarmonyGeneratedEntry>$(IntermediateOutputPath)OpenHarmonyEntryPoint.g.cs</_OpenHarmonyGeneratedEntry>
     </PropertyGroup>
@@ -61,6 +64,7 @@
       <_OpenHarmonySetting Include="Device" Value="$(OpenHarmonyDevice)" />
       <_OpenHarmonySetting Include="DevelopmentSigning" Value="$(OpenHarmonyUseDevelopmentSigning)" />
       <_OpenHarmonySetting Include="SignedHapPath" Value="$(OpenHarmonySignedHapPath)" />
+      <_OpenHarmonySetting Include="StageTemplate" Value="$(OpenHarmonyFrameworkRoot)/templates/Stage" Condition="'$(OpenHarmonySurface)' == 'true'" />
     </ItemGroup>
     <WriteSettings FilePath="$(_OpenHarmonySettingsPath)" Settings="@(_OpenHarmonySetting)" />
   </Target>

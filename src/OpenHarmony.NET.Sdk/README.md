@@ -27,9 +27,11 @@ dotnet publish
 ```
 
 Applications use `Microsoft.NET.Sdk` and `TargetFramework=net11.0-ohos`.
-The default entry point is `public static int App.Run()`; change it with
-`OpenHarmonyEntryPoint`. The provided Stage shell displays its result and the
-runtime major version. The minimum platform is API 15. `OpenHarmonyApiLevel`
+The TFM supplies the OpenHarmony Framework reference. The template enables
+`OpenHarmonySurface` and starts a `SurfaceView` that draws a blue background.
+Projects using the original Stage bridge can configure the static `int`
+entry point with `OpenHarmonyEntryPoint` (default `App.Run`).
+The minimum platform is API 15. `OpenHarmonyApiLevel`
 selects the native compiler SDK (inferred when only one SDK is present).
 
 `build` compiles managed code and validates the SDK. `publish` compiles NativeAOT
