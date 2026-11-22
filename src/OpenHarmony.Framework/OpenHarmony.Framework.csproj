@@ -20,6 +20,15 @@
     <None Update="buildTransitive/**/*;templates/**/*;scripts/**/*" Pack="true" PackagePath="%(Identity)" />
     <None Include="../OpenHarmony.NET.Sdk/scripts/*.ps1" Pack="true" PackagePath="scripts/" />
   </ItemGroup>
+  <Target Name="PinBindingsPackageVersion" AfterTargets="_GetProjectReferenceVersions">
+    <!-- Keep the project reference for source builds and pin its NuGet dependency for consumers. -->
+    <ItemGroup>
+      <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)"
+                                     Condition="'%(_ProjectReferencesWithVersions.Filename)' == 'OpenHarmony.NDK.Bindings'">
+        <ProjectVersion>[%(_ProjectReferencesWithVersions.ProjectVersion)]</ProjectVersion>
+      </_ProjectReferencesWithVersions>
+    </ItemGroup>
+  </Target>
   <Target Name="ValidateFrameworkAssets" BeforeTargets="Pack">
     <Error Condition="!Exists('../../artifacts/framework/native/x86_64/libopenharmony_framework.so') or !Exists('../../artifacts/framework/native/arm64-v8a/libopenharmony_framework.so')" Text="Build both Framework native assets with tools/build-framework-native.ps1 before packing." />
   </Target>
