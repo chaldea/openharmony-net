@@ -1,0 +1,5 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "dependencies": { "libopenharmony_framework.so": "file:./src/main/types/libopenharmony_framework" }
+}

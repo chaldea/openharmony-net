@@ -1,0 +1,25 @@
+<Project>
+  <PropertyGroup>
+    <OpenHarmonyFrameworkRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</OpenHarmonyFrameworkRoot>
+    <OpenHarmonyPowerShell Condition="'$(OpenHarmonyPowerShell)' == '' and '$(OS)' == 'Windows_NT'">powershell.exe</OpenHarmonyPowerShell>
+    <OpenHarmonyPowerShell Condition="'$(OpenHarmonyPowerShell)' == ''">pwsh</OpenHarmonyPowerShell>
+  </PropertyGroup>
+  <Target Name="IncludeOpenHarmonyFrameworkAssets" BeforeTargets="AssignTargetPaths" Condition="'$(OpenHarmonyTarget)' == 'true'">
+    <Error Condition="'$(OpenHarmonyAbi)' != 'x86_64' and '$(OpenHarmonyAbi)' != 'arm64-v8a'" Text="Framework supports x86_64 and arm64-v8a." />
+    <Error Condition="'$(OpenHarmonyApiLevel)' != '' and '$(OpenHarmonyApiLevel)' != '0' and $(OpenHarmonyApiLevel) &lt; 15" Text="OpenHarmony.Framework requires API 15 or later." />
+    <Error Condition="!Exists('$(OpenHarmonyFrameworkRoot)/native/$(OpenHarmonyAbi)/libopenharmony_framework.so')" Text="The Framework native asset for $(OpenHarmonyAbi) is missing." />
+    <ItemGroup>
+      <Content Include="$(OpenHarmonyFrameworkRoot)/native/$(OpenHarmonyAbi)/libopenharmony_framework.so" Link="libopenharmony_framework.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+  <!-- Player.Sdk consumers use the same provider-owned packaging script as the workload. -->
+  <Target Name="PackageOpenHarmonySurface" AfterTargets="Publish" Condition="'$(OpenHarmonySurface)' == 'true' and '$(OpenHarmonyWorkloadRoot)' == ''">
+    <CallTarget Targets="_PackageOpenHarmonySurface" />
+  </Target>
+  <Target Name="_PackageOpenHarmonySurface">
+    <Exec Command="&quot;$(OpenHarmonyPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(OpenHarmonyFrameworkRoot)/scripts/surface.ps1&quot; -Action Package -PublishDirectory &quot;$(PublishDir)/.&quot; -AssemblyName &quot;$(AssemblyName)&quot; -BundleName &quot;$(OpenHarmonyBundleName)&quot; -Abi &quot;$(OpenHarmonyAbi)&quot; -CommandLineTools &quot;$(OpenHarmonyCommandLineTools)&quot; -JavaHome &quot;$(OpenHarmonyJavaHome)&quot;" />
+  </Target>
+  <Target Name="RunOpenHarmonySurface">
+    <Exec Command="&quot;$(OpenHarmonyPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(OpenHarmonyFrameworkRoot)/scripts/surface.ps1&quot; -Action Run -PublishDirectory &quot;$(PublishDir)/.&quot; -AssemblyName &quot;$(AssemblyName)&quot; -BundleName &quot;$(OpenHarmonyBundleName)&quot; -Abi &quot;$(OpenHarmonyAbi)&quot; -Device &quot;$(OpenHarmonyDevice)&quot; -CommandLineTools &quot;$(OpenHarmonyCommandLineTools)&quot; -JavaHome &quot;$(OpenHarmonyJavaHome)&quot;" />
+  </Target>
+</Project>

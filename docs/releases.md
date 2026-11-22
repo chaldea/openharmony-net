@@ -35,8 +35,7 @@ Windows runner 上重新检查哈希、包集合、内部依赖和与 tag 一致
 GitHub 托管的 Ubuntu runner 推送。不要把这个自托管 runner 用于不可信 PR。
 
 构建 runner 按 [项目维护](maintainers.md) 安装 Visual Studio C++、Git、PowerShell 7.3+、
-Python 3.12+ 和 Ninja，
-保留足够空间构建两个运行时，并配置：
+GitHub CLI、Python 3.12+ 和 Ninja，保留足够空间构建原生图形库，并配置：
 
 - `OHOS_COMMAND_LINE_TOOLS`：官方 command-line-tools 根目录，包含 SDK / ohpm / Hvigor。
 - `JAVA_HOME`：JDK 17+ 根目录。
@@ -59,8 +58,9 @@ SDK feature band 固定为当前验证的 `11.0.100`；发布其它 band 前需�
 
 工作流从所选 Git revision 构建，流程如下：
 
-1. 检查 NuGet 名称，构建解决方案，运行单元测试。
-2. 下载并验证官方 API13/API15 Native SDK，构建 ICU/OpenSSL 和 x64/arm64 NativeAOT。
+1. 下载与所选提交匹配的 x64/arm64 NativeAOT 基线，核对 SHA-256 和 provenance。
+   发布 tag 前应已上传对应的基线 Release，见 [项目维护](maintainers.md#维护)。
+2. 检查 NuGet 名称，构建解决方案，运行单元测试，准备官方 API15 Native SDK。
 3. 使用 API15 编译 x64/arm64 SkiaSharp 和 HarfBuzzSharp，打包十二个制品；验证 Player.Sdk
    依赖及原生导出，以及使用新图形包生成的两个 SkiaDemo HAP。
 4. 安装一次性 .NET SDK，从本地源安装 dotnet tool，验证 init、workload 安装/卸载/恢复、

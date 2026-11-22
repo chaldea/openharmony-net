@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsPackable>true</IsPackable>
+    <PackageId>Chaldea.OpenHarmony.Framework</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- Invoked explicitly by MSBuild, never by NuGet install hooks. -->
+    <NoWarn>$(NoWarn);NU5110;NU5111</NoWarn>
+    <Description>C# platform APIs and reusable SurfaceView host for OpenHarmony API 15+.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../OpenHarmony.NDK.Bindings/OpenHarmony.NDK.Bindings.csproj" />
+    <InternalsVisibleTo Include="OpenHarmony.Framework.Tests" />
+    <None Update="README.md" Pack="true" PackagePath="/" />
+    <None Include="../../artifacts/framework/native/**/*.so" Pack="true" PackagePath="native/" />
+    <None Update="buildTransitive/**/*;templates/**/*;scripts/**/*" Pack="true" PackagePath="%(Identity)" />
+    <None Include="../OpenHarmony.NET.Sdk/scripts/*.ps1" Pack="true" PackagePath="scripts/" />
+  </ItemGroup>
+  <Target Name="ValidateFrameworkAssets" BeforeTargets="Pack">
+    <Error Condition="!Exists('../../artifacts/framework/native/x86_64/libopenharmony_framework.so') or !Exists('../../artifacts/framework/native/arm64-v8a/libopenharmony_framework.so')" Text="Build both Framework native assets with tools/build-framework-native.ps1 before packing." />
+  </Target>
+</Project>

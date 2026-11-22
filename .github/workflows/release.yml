@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    # NativeAOT + ICU/OpenSSL needs the documented VS/SDK/CLI environment and disk space.
+    # SkiaSharp/HarfBuzzSharp and HAP verification need the documented native toolchain.
     runs-on: [self-hosted, Windows, X64, harmonyos]
     timeout-minutes: 720
     env:
@@ -32,11 +32,14 @@ jobs:
         with:
           submodules: recursive
           clean: true
+      - name: Download the pinned NativeAOT runtime baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNTIME_BASELINE_REPOSITORY: ${{ vars.RUNTIME_BASELINE_REPOSITORY || github.repository }}
+        run: ./tools/runtime-baseline.ps1 -Action Restore -Repository $env:RUNTIME_BASELINE_REPOSITORY
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-      - name: Check runtime sources and the stable build SDK
-        run: ./tools/resolve-runtime-sdk.ps1
       - name: Resolve release version
         id: version
         env:
@@ -51,12 +54,8 @@ jobs:
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.value }}
         run: ./build.ps1 -Target Test -Version $env:RELEASE_VERSION
-      - name: Prepare official Native SDK and dependencies
-        run: |
-          ./tools/install-native-sdk.ps1
-          ./tools/prepare-native-dependencies.ps1 -SdkRoot ./artifacts/native/sdk
-      - name: Build both NativeAOT runtimes from source
-        run: ./tools/build-runtime.ps1 -SdkRoot ./artifacts/native/sdk
+      - name: Prepare the official API15 Native SDK
+        run: ./tools/install-native-sdk.ps1 -ApiLevels 15
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -65,7 +64,7 @@ jobs:
       - name: Pack complete release
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.value }}
-        run: ./build.ps1 -Target Pack -Version $env:RELEASE_VERSION
+        run: ./build.ps1 -Target Pack -Version $env:RELEASE_VERSION -RuntimeArtifacts ./artifacts/runtime-baseline
       - name: Verify renamed NuGet dependencies
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.value }}

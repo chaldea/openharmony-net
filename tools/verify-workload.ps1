@@ -66,7 +66,7 @@ function Assert-Hap {
     if (!(Test-Path -LiteralPath $hap)) { throw "HAP missing: $hap" }
     $zip = [IO.Compression.ZipFile]::OpenRead($hap)
     try {
-        foreach ($name in @('WorkloadSmoke.so','libdotnet.so','libc++_shared.so')) {
+        foreach ($name in @('WorkloadSmoke.so','libc++_shared.so','libopenharmony_framework.so')) {
             if (!$zip.GetEntry("libs/$Abi/$name")) { throw "$hap is missing $name" }
         }
         $native = @($zip.Entries | Where-Object { $_.FullName -match '^libs/.*\.so(\.|$)' })
@@ -109,7 +109,8 @@ try {
     # Stop repository-level MSBuild settings and package sources from leaking in.
     [IO.File]::WriteAllText((Join-Path $runRoot 'Directory.Build.props'), '<Project />')
     [IO.File]::WriteAllText((Join-Path $runRoot 'Directory.Build.targets'), '<Project />')
-    [IO.File]::WriteAllText((Join-Path $runRoot 'NuGet.Config'), '<configuration><packageSources><clear/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources></configuration>')
+    $escapedSource = [Security.SecurityElement]::Escape($PackageSource)
+    [IO.File]::WriteAllText((Join-Path $runRoot 'NuGet.Config'), "<configuration><packageSources><clear/><add key='workload' value='$escapedSource'/><add key='nuget.org' value='https://api.nuget.org/v3/index.json'/></packageSources></configuration>")
     @{ sdk = @{ version = $sdkVersion; rollForward = 'disable' } } | ConvertTo-Json | Set-Content (Join-Path $runRoot 'global.json')
     $toolPath = Join-Path $runRoot 'tools'
     Invoke-Dotnet 'tool-install' @('tool','install','Chaldea.OpenHarmony.Workload','--tool-path',$toolPath,
@@ -138,16 +139,18 @@ try {
         Invoke-Dotnet 'run' @('run','--project',$project,"-p:OpenHarmonyDevice=$Device",'-p:OpenHarmonyBundleName=org.openharmony.dotnet.workloadsmoke')
         $hdc = Join-Path $CommandLineTools "sdk/default/openharmony/toolchains/hdc$executableExtension"
         $deadline = (Get-Date).AddSeconds(60)
+        $rendered = $false
         do {
             $appPid = (& $hdc -t $Device shell pidof org.openharmony.dotnet.workloadsmoke | Out-String).Trim()
             $log = ''
-            if ($appPid -match '^\d+$') { $log = (& $hdc -t $Device shell hilog -x -T DotNetOhos -P $appPid | Out-String) }
-            if ($log -match 'DOTNET_OHOS result=42 runtime=11 runs=1') { break }
+            if ($appPid -match '^\d+$') { $log = (& $hdc -t $Device shell hilog -x -T OpenHarmony -P $appPid | Out-String) }
+            $rendered = $log -match 'OH_FRAMEWORK created runtime=11 backend=OpenGL' -and $log -match 'OH_HARMONY first_frame=1'
+            if ($rendered) { break }
             Start-Sleep -Seconds 2
         } while ((Get-Date) -lt $deadline)
         $log | Set-Content (Join-Path $runRoot 'hilog.log')
-        if ($log -notmatch 'DOTNET_OHOS result=42 runtime=11 runs=1') { throw 'The installed application did not execute .NET 11 successfully.' }
-        $deviceResult = @{ target = $Device; runtimeMajor = 11; result = 42 }
+        if (!$rendered) { throw 'The installed application did not render a Framework frame on .NET 11.' }
+        $deviceResult = @{ target = $Device; runtimeMajor = 11; backend = 'OpenGL'; firstFrame = $true }
     }
     Invoke-Dotnet 'uninstall' @('workload','uninstall','harmonyos')
     $installed = $false
