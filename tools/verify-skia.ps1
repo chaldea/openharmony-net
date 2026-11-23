@@ -19,6 +19,25 @@ $bundle = 'org.openharmony.dotnet.skia'
 $results = @()
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+$hapTaskAssembly = Join-Path $RepoRoot 'src/OpenHarmony.Framework.Tasks/bin/Release/net11.0/OpenHarmony.Framework.Tasks.dll'
+
+function Invoke-HapRun {
+    param([string]$HapPath, [string]$PublishDirectory, [string]$Abi, [string]$AssemblyName, [string]$BundleName, [string]$WorkDirectory)
+    $project = Join-Path $WorkDirectory 'run-hap.proj'
+    $xml = @"
+<Project>
+  <UsingTask TaskName="OpenHarmony.Framework.Tasks.RunHap" AssemblyFile="$hapTaskAssembly" />
+  <Target Name="Run">
+    <RunHap ProjectDirectory="$RepoRoot" Device="$Device" DevelopmentSigning="true"
+      PublishDirectory="$PublishDirectory" WorkDirectory="$WorkDirectory" HapPath="$HapPath"
+      AssemblyName="$AssemblyName" BundleName="$BundleName" Abi="$Abi"
+      CommandLineTools="$CommandLineTools" JavaHome="$JavaHome" />
+  </Target>
+</Project>
+"@
+    Set-Content -LiteralPath $project -Value $xml -Encoding utf8
+    Invoke-Checked dotnet @('msbuild', $project, '-target:Run', '-nologo')
+}
 $oldPath = $env:PATH
 $oldJava = $env:JAVA_HOME
 $oldSdk = $env:DEVECO_SDK_HOME
@@ -84,7 +103,7 @@ try {
                 BundleName=$bundle; AssemblyName='SkiaDemo'; HapPath=$hap; PublishDirectory=$publish;
                 WorkDirectory=(Join-Path $output 'device'); DevelopmentSigning='true'; SignedHapPath=''
             } | ConvertTo-Json | Set-Content -Encoding UTF8 $settingsPath
-            & "$RepoRoot/src/OpenHarmony.NET.Sdk/scripts/hap.ps1" -Action Run -SettingsPath $settingsPath
+            Invoke-HapRun $hap $publish $abi 'SkiaDemo' $bundle (Join-Path $output 'device')
             $hdc = Join-Path $CommandLineTools 'sdk/default/openharmony/toolchains/hdc.exe'
             $deadline = (Get-Date).AddSeconds(60)
             do {

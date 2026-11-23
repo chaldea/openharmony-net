@@ -19,6 +19,25 @@ $oldJava = $env:JAVA_HOME
 $oldSdk = $env:DEVECO_SDK_HOME
 $results = @()
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$hapTaskAssembly = Join-Path $RepoRoot 'src/OpenHarmony.Framework.Tasks/bin/Release/net11.0/OpenHarmony.Framework.Tasks.dll'
+
+function Invoke-HapRun {
+    param([string]$HapPath, [string]$PublishDirectory, [string]$Abi, [string]$AssemblyName, [string]$BundleName, [string]$WorkDirectory)
+    $project = Join-Path $WorkDirectory 'run-hap.proj'
+    $xml = @"
+<Project>
+  <UsingTask TaskName="OpenHarmony.Framework.Tasks.RunHap" AssemblyFile="$hapTaskAssembly" />
+  <Target Name="Run">
+    <RunHap ProjectDirectory="$RepoRoot" Device="$Device" DevelopmentSigning="true"
+      PublishDirectory="$PublishDirectory" WorkDirectory="$WorkDirectory" HapPath="$HapPath"
+      AssemblyName="$AssemblyName" BundleName="$BundleName" Abi="$Abi"
+      CommandLineTools="$CommandLineTools" JavaHome="$JavaHome" />
+  </Target>
+</Project>
+"@
+    Set-Content -LiteralPath $project -Value $xml -Encoding utf8
+    Invoke-Checked dotnet @('msbuild', $project, '-target:Run', '-nologo')
+}
 try {
     foreach ($arch in @('x64', 'arm64')) {
         $abi = if ($arch -eq 'x64') { 'x86_64' } else { 'arm64-v8a' }
@@ -131,7 +150,7 @@ struct Index {
                 BundleName=$bundle; AssemblyName='OpenHarmony.Demo'; HapPath=$hap; PublishDirectory=$demo;
                 WorkDirectory=(Join-Path $output 'device'); DevelopmentSigning='true'; SignedHapPath=''
             } | ConvertTo-Json | Set-Content -Encoding utf8 $settings
-            & "$RepoRoot/src/OpenHarmony.NET.Sdk/scripts/hap.ps1" -Action Run -SettingsPath $settings
+            Invoke-HapRun $hap $demo $abi 'OpenHarmony.Demo' $bundle (Join-Path $output 'device')
             $deadline = (Get-Date).AddSeconds(60)
             do {
                 $appPid = (& $hdc -t $Device shell pidof $bundle | Out-String).Trim()

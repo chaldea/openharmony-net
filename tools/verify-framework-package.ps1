@@ -16,7 +16,7 @@ try {
     }
     foreach ($entry in @('lib/net11.0/OpenHarmony.Framework.dll',
         'native/x86_64/libopenharmony_framework.so', 'native/arm64-v8a/libopenharmony_framework.so',
-        'buildTransitive/Chaldea.OpenHarmony.Framework.targets', 'scripts/surface.ps1', 'scripts/hap.ps1',
+        'buildTransitive/Chaldea.OpenHarmony.Framework.targets', 'tools/net11.0/OpenHarmony.Framework.Tasks.dll',
         'templates/Stage/entry/src/main/ets/SurfaceView.ets')) {
         if (!$zip.GetEntry($entry)) { throw "Framework package is missing $entry" }
     }

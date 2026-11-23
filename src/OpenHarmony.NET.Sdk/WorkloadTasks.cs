@@ -58,11 +58,9 @@ public sealed class ResolveSdk : Microsoft.Build.Utilities.Task
     }
 }
 
-public sealed class WriteRunSettings : Microsoft.Build.Utilities.Task
+public sealed class WriteRunResponseFile : Microsoft.Build.Utilities.Task
 {
     [Required] public string FilePath { get; set; } = "";
-    [Required] public string ProjectPath { get; set; } = "";
-    [Required] public string DotnetPath { get; set; } = "";
     [Required] public string Configuration { get; set; } = "";
     [Required] public string TargetFramework { get; set; } = "";
 
@@ -74,7 +72,10 @@ public sealed class WriteRunSettings : Microsoft.Build.Utilities.Task
         properties["Configuration"] = Configuration;
         properties["TargetFramework"] = TargetFramework;
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(FilePath))!);
-        File.WriteAllText(FilePath, JsonSerializer.Serialize(new { ProjectPath, DotnetPath, Properties = properties }));
+        // Response files split on whitespace, and -property splits on commas/semicolons.
+        // MSBuild unescapes the literal values after parsing these separators.
+        File.WriteAllLines(FilePath, properties.Select(property => "-property:" + property.Key + "=" +
+            Regex.Replace(property.Value, @"[%$@();,?*'""# \t\r\n]", m => $"%{(int)m.Value[0]:X2}")));
         return true;
     }
 }
@@ -83,6 +84,7 @@ public sealed class WriteSettings : Microsoft.Build.Utilities.Task
 {
     [Required] public string FilePath { get; set; } = "";
     [Required] public ITaskItem[] Settings { get; set; } = [];
+
     public override bool Execute()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(FilePath))!);
