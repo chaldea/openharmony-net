@@ -8,18 +8,23 @@
     <IsPackable>true</IsPackable>
     <PackageId>Chaldea.OpenHarmony.Framework</PackageId>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <!-- Invoked explicitly by MSBuild, never by NuGet install hooks. -->
-    <NoWarn>$(NoWarn);NU5110;NU5111</NoWarn>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackHapTasks</TargetsForTfmSpecificContentInPackage>
     <Description>C# platform APIs and reusable SurfaceView host for OpenHarmony API 15+.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../OpenHarmony.NDK.Bindings/OpenHarmony.NDK.Bindings.csproj" />
+    <ProjectReference Include="../OpenHarmony.Framework.Tasks/OpenHarmony.Framework.Tasks.csproj"
+                      ReferenceOutputAssembly="false" PrivateAssets="all" OutputItemType="_HapTasksAssembly" />
     <InternalsVisibleTo Include="OpenHarmony.Framework.Tests" />
     <None Update="README.md" Pack="true" PackagePath="/" />
     <None Include="../../artifacts/framework/native/**/*.so" Pack="true" PackagePath="native/" />
-    <None Update="buildTransitive/**/*;templates/**/*;scripts/**/*" Pack="true" PackagePath="%(Identity)" />
-    <None Include="../OpenHarmony.NET.Sdk/scripts/*.ps1" Pack="true" PackagePath="scripts/" />
+    <None Update="buildTransitive/**/*;templates/**/*" Pack="true" PackagePath="%(Identity)" />
   </ItemGroup>
+  <Target Name="PackHapTasks" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="@(_HapTasksAssembly)" PackagePath="tools/$(TargetFramework)/" />
+    </ItemGroup>
+  </Target>
   <Target Name="PinBindingsPackageVersion" AfterTargets="_GetProjectReferenceVersions">
     <!-- Keep the project reference for source builds and pin its NuGet dependency for consumers. -->
     <ItemGroup>

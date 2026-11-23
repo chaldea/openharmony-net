@@ -1,9 +1,9 @@
 <Project>
   <PropertyGroup>
     <OpenHarmonyFrameworkRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</OpenHarmonyFrameworkRoot>
-    <OpenHarmonyPowerShell Condition="'$(OpenHarmonyPowerShell)' == '' and '$(OS)' == 'Windows_NT'">powershell.exe</OpenHarmonyPowerShell>
-    <OpenHarmonyPowerShell Condition="'$(OpenHarmonyPowerShell)' == ''">pwsh</OpenHarmonyPowerShell>
   </PropertyGroup>
+  <UsingTask TaskName="OpenHarmony.Framework.Tasks.PackageHap" AssemblyFile="$(OpenHarmonyFrameworkRoot)/tools/net11.0/OpenHarmony.Framework.Tasks.dll" />
+  <UsingTask TaskName="OpenHarmony.Framework.Tasks.RunHap" AssemblyFile="$(OpenHarmonyFrameworkRoot)/tools/net11.0/OpenHarmony.Framework.Tasks.dll" />
   <Target Name="IncludeOpenHarmonyFrameworkAssets" BeforeTargets="AssignTargetPaths" Condition="'$(OpenHarmonyTarget)' == 'true'">
     <Error Condition="'$(OpenHarmonyAbi)' != 'x86_64' and '$(OpenHarmonyAbi)' != 'arm64-v8a'" Text="Framework supports x86_64 and arm64-v8a." />
     <Error Condition="'$(OpenHarmonyApiLevel)' != '' and '$(OpenHarmonyApiLevel)' != '0' and $(OpenHarmonyApiLevel) &lt; 15" Text="OpenHarmony.Framework requires API 15 or later." />
@@ -12,14 +12,34 @@
       <Content Include="$(OpenHarmonyFrameworkRoot)/native/$(OpenHarmonyAbi)/libopenharmony_framework.so" Link="libopenharmony_framework.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
-  <!-- Player.Sdk consumers use the same provider-owned packaging script as the workload. -->
-  <Target Name="PackageOpenHarmonySurface" AfterTargets="Publish" Condition="'$(OpenHarmonySurface)' == 'true' and '$(OpenHarmonyWorkloadRoot)' == ''">
-    <CallTarget Targets="_PackageOpenHarmonySurface" />
+  <Target Name="_PrepareOpenHarmonyHap">
+    <PropertyGroup>
+      <OpenHarmonyCommandLineTools Condition="'$(OpenHarmonyCommandLineTools)' == ''">$(OHOS_COMMAND_LINE_TOOLS)</OpenHarmonyCommandLineTools>
+      <OpenHarmonyJavaHome Condition="'$(OpenHarmonyJavaHome)' == ''">$(JAVA_HOME)</OpenHarmonyJavaHome>
+      <OpenHarmonyHapPath Condition="'$(OpenHarmonyHapPath)' == ''">$([System.IO.Path]::Combine('$(PublishDir)', '$(AssemblyName)-unsigned.hap'))</OpenHarmonyHapPath>
+      <_OpenHarmonyWorkDirectory>$(IntermediateOutputPath)harmonyos</_OpenHarmonyWorkDirectory>
+      <_OpenHarmonyStageTemplate>$(OpenHarmonyFrameworkRoot)/templates/Stage</_OpenHarmonyStageTemplate>
+      <_OpenHarmonyStageTemplate Condition="'$(OpenHarmonyWorkloadRoot)' != '' and '$(OpenHarmonySurface)' != 'true'">$(OpenHarmonyWorkloadRoot)/templates/Stage</_OpenHarmonyStageTemplate>
+      <_OpenHarmonyBuildMode>$(Configuration.ToLowerInvariant())</_OpenHarmonyBuildMode>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(OpenHarmonyWorkloadRoot)' == ''">
+      <_OpenHarmonyWorkDirectory>$(PublishDir)/../framework-stage</_OpenHarmonyWorkDirectory>
+      <_OpenHarmonyBuildMode>debug</_OpenHarmonyBuildMode>
+      <OpenHarmonyUseDevelopmentSigning Condition="'$(OpenHarmonyUseDevelopmentSigning)' == ''">true</OpenHarmonyUseDevelopmentSigning>
+    </PropertyGroup>
   </Target>
-  <Target Name="_PackageOpenHarmonySurface">
-    <Exec Command="&quot;$(OpenHarmonyPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(OpenHarmonyFrameworkRoot)/scripts/surface.ps1&quot; -Action Package -PublishDirectory &quot;$(PublishDir)/.&quot; -AssemblyName &quot;$(AssemblyName)&quot; -BundleName &quot;$(OpenHarmonyBundleName)&quot; -Abi &quot;$(OpenHarmonyAbi)&quot; -CommandLineTools &quot;$(OpenHarmonyCommandLineTools)&quot; -JavaHome &quot;$(OpenHarmonyJavaHome)&quot;" />
+  <Target Name="PackageOpenHarmonySurface" AfterTargets="Publish" DependsOnTargets="_PackageOpenHarmonyHap"
+          Condition="'$(OpenHarmonySurface)' == 'true' and '$(OpenHarmonyWorkloadRoot)' == ''" />
+  <Target Name="_PackageOpenHarmonyHap" DependsOnTargets="_PrepareOpenHarmonyHap">
+    <PackageHap ProjectDirectory="$(MSBuildProjectDirectory)" StageTemplate="$(_OpenHarmonyStageTemplate)" BuildMode="$(_OpenHarmonyBuildMode)"
+                PublishDirectory="$(PublishDir)" WorkDirectory="$(_OpenHarmonyWorkDirectory)" HapPath="$(OpenHarmonyHapPath)"
+                AssemblyName="$(AssemblyName)" BundleName="$(OpenHarmonyBundleName)" Abi="$(OpenHarmonyAbi)"
+                CommandLineTools="$(OpenHarmonyCommandLineTools)" JavaHome="$(OpenHarmonyJavaHome)" />
   </Target>
-  <Target Name="RunOpenHarmonySurface">
-    <Exec Command="&quot;$(OpenHarmonyPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(OpenHarmonyFrameworkRoot)/scripts/surface.ps1&quot; -Action Run -PublishDirectory &quot;$(PublishDir)/.&quot; -AssemblyName &quot;$(AssemblyName)&quot; -BundleName &quot;$(OpenHarmonyBundleName)&quot; -Abi &quot;$(OpenHarmonyAbi)&quot; -Device &quot;$(OpenHarmonyDevice)&quot; -CommandLineTools &quot;$(OpenHarmonyCommandLineTools)&quot; -JavaHome &quot;$(OpenHarmonyJavaHome)&quot;" />
+  <Target Name="RunOpenHarmonySurface" DependsOnTargets="_PrepareOpenHarmonyHap">
+    <RunHap ProjectDirectory="$(MSBuildProjectDirectory)" Device="$(OpenHarmonyDevice)" DevelopmentSigning="$(OpenHarmonyUseDevelopmentSigning)" SignedHapPath="$(OpenHarmonySignedHapPath)"
+            PublishDirectory="$(PublishDir)" WorkDirectory="$(_OpenHarmonyWorkDirectory)" HapPath="$(OpenHarmonyHapPath)"
+            AssemblyName="$(AssemblyName)" BundleName="$(OpenHarmonyBundleName)" Abi="$(OpenHarmonyAbi)"
+            CommandLineTools="$(OpenHarmonyCommandLineTools)" JavaHome="$(OpenHarmonyJavaHome)" />
   </Target>
 </Project>

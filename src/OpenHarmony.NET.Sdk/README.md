@@ -3,14 +3,13 @@
 Installed by the `harmonyos` .NET workload on Windows x64, Linux x64 and macOS
 x64/arm64. This package supplies
 MSBuild support for `net11.0-ohos`, a NativeAOT entry-point bridge, the Stage
-application shell, HAP packaging and device launch scripts. It is a workload SDK,
+application shell, HAP packaging and device launch tasks. It is a workload SDK,
 not a `PackageReference` or an SDK name to put in the application's `Sdk` attribute.
 
 Install the bootstrap tool and workload, then create an application:
 
 Use a writable standalone .NET SDK 11.0.1xx on PATH; MSI-managed workload
-installations are not supported. Linux and macOS also need PowerShell 7 (`pwsh`)
-on PATH for HAP packaging. Install the HarmonyOS CLI tools for the host OS and
+installations are not supported. Install the HarmonyOS CLI tools for the host OS and
 architecture, and JDK 17+. The current packages are a preview release.
 
 ```powershell

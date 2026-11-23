@@ -14,10 +14,10 @@ dotnet publish examples/FrameworkVideo -c Release -o artifacts/framework/probe/p
   -p:OpenHarmonyCommandLineTools=<command-line-tools> -p:OpenHarmonyJavaHome=<jdk>
 ```
 
-Install/run the resulting HAP using the Framework package's `scripts/surface.ps1 -Action Run`
-with PublishDirectory, AssemblyName (`FrameworkVideo`), BundleName (`org.openharmony.frameworkvideo`),
-CommandLineTools and JavaHome. The package is restored under the normal NuGet cache or the specified
-`RestorePackagesPath`. Generated HAPs use development signing only when explicitly running locally.
+The publish target creates the HAP through the Framework package's MSBuild task. Set
+`OpenHarmonyCommandLineTools`, `OpenHarmonyJavaHome`, and `OpenHarmonyUseDevelopmentSigning=true`
+for local device runs. The package is restored under the normal NuGet cache or the specified
+`RestorePackagesPath`.
 
 ```powershell
 hdc shell aa start -b org.openharmony.frameworkvideo -a EntryAbility --ps openharmonyRoute /video

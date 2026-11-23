@@ -26,8 +26,6 @@
     <OpenHarmonySdkRoot Condition="'$(OpenHarmonySdkRoot)' == ''">$(OHOS_SDK_ROOT)</OpenHarmonySdkRoot>
     <!-- Zero means infer from the single installed SDK's manifest. -->
     <OpenHarmonyApiLevel Condition="'$(OpenHarmonyApiLevel)' == ''">0</OpenHarmonyApiLevel>
-    <OpenHarmonyPowerShell Condition="'$(OpenHarmonyPowerShell)' == '' and '$(OS)' == 'Windows_NT'">powershell.exe</OpenHarmonyPowerShell>
-    <OpenHarmonyPowerShell Condition="'$(OpenHarmonyPowerShell)' == ''">pwsh</OpenHarmonyPowerShell>
     <OpenHarmonyUseDevelopmentSigning Condition="'$(OpenHarmonyUseDevelopmentSigning)' == '' and '$(Configuration)' == 'Debug'">true</OpenHarmonyUseDevelopmentSigning>
     <OpenHarmonyRuntimePackPath>$(_OpenHarmonyPacksRoot)/Chaldea.OpenHarmony.Runtime.NativeAot.$(OpenHarmonyAbi)/$(OpenHarmonyWorkloadVersion)/runtime-pack</OpenHarmonyRuntimePackPath>
     <IlcFrameworkNativePath>$(OpenHarmonyRuntimePackPath)/native/</IlcFrameworkNativePath>

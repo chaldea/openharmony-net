@@ -86,11 +86,12 @@ jobs:
           - macos-latest
     defaults:
       run:
-        shell: pwsh
+        shell: bash
     env:
       # Isolate file-based workload installation from preinstalled SDKs and MSI.
       DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-sdk
       WORKLOAD_VERSION: ${{ needs.build.outputs.version }}
+      SDK_VERSION: ${{ needs.build.outputs.sdk-version }}
       HARMONYOS_CLI_VERSION: '6.1.1.280'
     steps:
       - uses: actions/checkout@v4
@@ -104,9 +105,8 @@ jobs:
           dotnet-version: ${{ needs.build.outputs.sdk-version }}
       - name: Verify the standalone SDK version
         run: |
-          $expected = (Get-Content -Raw global.json | ConvertFrom-Json).sdk.version
-          $actual = dotnet --version
-          if ($LASTEXITCODE -ne 0 -or $actual.Trim() -ne $expected) { throw "Expected SDK $expected, selected $actual." }
+          actual=$(dotnet --version)
+          test "$actual" = "$SDK_VERSION"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -132,12 +132,12 @@ jobs:
           cache: false
       - name: Check the HarmonyOS toolchain
         run: |
-          $cli = Split-Path $env:HOS_SDK_HOME -Parent
-          $native = Join-Path $cli 'sdk/default/openharmony/native'
-          if (!(Test-Path (Join-Path $native 'oh-uni-package.json'))) { throw 'HarmonyOS Native SDK is missing.' }
-          "OHOS_COMMAND_LINE_TOOLS=$cli" >> $env:GITHUB_ENV
+          cli=$(dirname "$HOS_SDK_HOME")
+          native="$cli/sdk/default/openharmony/native"
+          test -f "$native/oh-uni-package.json"
+          echo "OHOS_COMMAND_LINE_TOOLS=$cli" >> "$GITHUB_ENV"
           hvigorw -v
-          if ($LASTEXITCODE -ne 0) { throw 'Hvigor is unavailable.' }
+          test "$?" -eq 0
       - name: Seed the default branch Windows HarmonyOS CLI cache
         if: >-
           runner.os == 'Windows' && steps.windows-ohos-cache.outputs.cache-hit != 'true' &&
@@ -149,6 +149,12 @@ jobs:
           key: ${{ steps.windows-ohos-cache.outputs.cache-primary-key }}
       - name: Install workload, create an app and publish both HAP architectures
         run: |
-          ./tools/verify-workload.ps1 -DotnetRoot $env:DOTNET_INSTALL_DIR `
-            -CommandLineTools $env:OHOS_COMMAND_LINE_TOOLS -JavaHome $env:JAVA_HOME `
-            -PackageSource ./artifacts/ci-packages -Version $env:WORKLOAD_VERSION
+          dotnet tool install Chaldea.OpenHarmony.Workload --tool-path ./artifacts/workload-tool --version "$WORKLOAD_VERSION" --source ./artifacts/ci-packages
+          tool="./artifacts/workload-tool/harmonyos-workload"
+          if [[ -f "$tool.exe" ]]; then tool="$tool.exe"; fi
+          "$tool" init --dotnet-root "$DOTNET_INSTALL_DIR"
+          dotnet workload install harmonyos --source ./artifacts/ci-packages --skip-manifest-update
+          dotnet new ohos -n WorkloadSmoke -o artifacts/workload-app
+          dotnet publish artifacts/workload-app/WorkloadSmoke.csproj -c Release
+          dotnet publish artifacts/workload-app/WorkloadSmoke.csproj -c Release -p:OpenHarmonyAbi=arm64-v8a
+          dotnet workload uninstall harmonyos

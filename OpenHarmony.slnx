@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/OpenHarmony.Framework/OpenHarmony.Framework.csproj" />
+    <Project Path="src/OpenHarmony.Framework.Tasks/OpenHarmony.Framework.Tasks.csproj" />
     <Project Path="src/SkiaSharp.NativeAssets.HarmonyOS/SkiaSharp.NativeAssets.HarmonyOS.csproj" />
     <Project Path="src/HarfBuzzSharp.NativeAssets.HarmonyOS/HarfBuzzSharp.NativeAssets.HarmonyOS.csproj" />
     <Project Path="src/OpenHarmony.NET.Sdk/OpenHarmony.NET.Sdk.csproj" />
