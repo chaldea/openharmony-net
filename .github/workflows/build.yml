@@ -90,6 +90,8 @@ jobs:
     env:
       # Isolate file-based workload installation from preinstalled SDKs and MSI.
       DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-sdk
+      NUGET_PACKAGES: ${{ github.workspace }}/artifacts/ci-nuget
+      MSBUILDDISABLENODEREUSE: '1'
       WORKLOAD_VERSION: ${{ needs.build.outputs.version }}
       SDK_VERSION: ${{ needs.build.outputs.sdk-version }}
       HARMONYOS_CLI_VERSION: '6.1.1.280'
@@ -132,12 +134,16 @@ jobs:
           cache: false
       - name: Check the HarmonyOS toolchain
         run: |
-          cli=$(dirname "$HOS_SDK_HOME")
-          native="$cli/sdk/default/openharmony/native"
-          test -f "$native/oh-uni-package.json"
+          sdk="$HOS_SDK_HOME"
+          hvigor=hvigorw
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            sdk=$(cygpath -am "$sdk")
+            hvigor=hvigorw.bat
+          fi
+          cli=$(dirname "$sdk")
+          test -f "$sdk/default/openharmony/native/oh-uni-package.json"
+          "$cli/bin/$hvigor" -v
           echo "OHOS_COMMAND_LINE_TOOLS=$cli" >> "$GITHUB_ENV"
-          hvigorw -v
-          test "$?" -eq 0
       - name: Seed the default branch Windows HarmonyOS CLI cache
         if: >-
           runner.os == 'Windows' && steps.windows-ohos-cache.outputs.cache-hit != 'true' &&
@@ -148,13 +154,27 @@ jobs:
           path: ~/ohos-sdk/command-line-tools
           key: ${{ steps.windows-ohos-cache.outputs.cache-primary-key }}
       - name: Install workload, create an app and publish both HAP architectures
+        working-directory: artifacts
         run: |
-          dotnet tool install Chaldea.OpenHarmony.Workload --tool-path ./artifacts/workload-tool --version "$WORKLOAD_VERSION" --source ./artifacts/ci-packages
-          tool="./artifacts/workload-tool/harmonyos-workload"
+          cat > NuGet.Config <<'EOF'
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="ci" value="ci-packages" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="ci"><package pattern="Chaldea.*" /></packageSource>
+              <packageSource key="nuget.org"><package pattern="*" /></packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+          dotnet tool install Chaldea.OpenHarmony.Workload --tool-path ./workload-tool --version "$WORKLOAD_VERSION" --configfile NuGet.Config
+          tool="./workload-tool/harmonyos-workload"
           if [[ -f "$tool.exe" ]]; then tool="$tool.exe"; fi
           "$tool" init --dotnet-root "$DOTNET_INSTALL_DIR"
-          dotnet workload install harmonyos --source ./artifacts/ci-packages --skip-manifest-update
-          dotnet new ohos -n WorkloadSmoke -o artifacts/workload-app
-          dotnet publish artifacts/workload-app/WorkloadSmoke.csproj -c Release
-          dotnet publish artifacts/workload-app/WorkloadSmoke.csproj -c Release -p:OpenHarmonyAbi=arm64-v8a
+          dotnet workload install harmonyos --source ./ci-packages --skip-manifest-update
+          dotnet new ohos -n WorkloadSmoke -o workload-app
+          dotnet publish workload-app/WorkloadSmoke.csproj -c Release -warnaserror:NU1603
+          dotnet publish workload-app/WorkloadSmoke.csproj -c Release -warnaserror:NU1603 -p:OpenHarmonyAbi=arm64-v8a
           dotnet workload uninstall harmonyos
