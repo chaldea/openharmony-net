@@ -10,14 +10,11 @@ Install the bootstrap tool and workload, then create an application:
 
 Use a writable standalone .NET SDK 11.0.1xx on PATH; MSI-managed workload
 installations are not supported. Install the HarmonyOS CLI tools for the host OS and
-architecture, and JDK 17+. The current packages are a preview release.
+architecture and put their `bin` directory on PATH. Publishing also requires JDK 17+.
 
 ```powershell
-dotnet tool install -g Chaldea.OpenHarmony.Workload --prerelease
-harmonyos-workload init
-dotnet workload install harmonyos --skip-manifest-update
-$env:OHOS_COMMAND_LINE_TOOLS = 'F:\.huawei\command-line-tools'
-$env:JAVA_HOME = 'D:\Program Files\Huawei\DevEco Studio\jbr'
+dotnet tool install -g Chaldea.OpenHarmony.Workload
+ohos workload install
 dotnet new ohos -n MyApp
 cd MyApp
 dotnet build

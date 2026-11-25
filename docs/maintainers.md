@@ -26,7 +26,7 @@ src/
   HarfBuzzSharp.NativeAssets.HarmonyOS/
 tests/                     绑定、生成器、SDK resolver、runtime packager 和 ABI 测试
 tools/                     生成器、打包器、构建和验证脚本
-  WorkloadInstaller/       NuGet 分发的 harmonyos-workload 工具
+  WorkloadInstaller/       NuGet 分发的 ohos 命令行工具
 examples/NativeAotSmoke/    ArkTS → N-API → C# NativeAOT 最小应用
 examples/SkiaDemo/          Skia 绘图、HarfBuzz 字形整形与 ArkUI PixelMap 显示
 OpenHarmony.slnx            统一解决方案

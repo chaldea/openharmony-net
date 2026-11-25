@@ -1,6 +1,6 @@
 # NuGet 发布流程
 
-本仓库的 .NET 工具使用 `Chaldea.OpenHarmony.*` 包名；图形扩展使用
+命令行工具的包名是 `Chaldea.OpenHarmony.Workload`，workload packs 使用 `Chaldea.OpenHarmony.*` 包名。图形扩展使用
 `Chaldea.SkiaSharp.NativeAssets.HarmonyOS` 和 `Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS`。
 源码目录、程序集名、C# 命名空间及
 `OpenHarmony*` MSBuild 属性保持原有命名；NuGet 自动导入的 props/targets 文件在打包时
@@ -63,7 +63,7 @@ SDK feature band 固定为当前验证的 `11.0.100`；发布其它 band 前需�
 2. 检查 NuGet 名称，构建解决方案，运行单元测试，准备官方 API15 Native SDK。
 3. 使用 API15 编译 x64/arm64 SkiaSharp 和 HarfBuzzSharp，打包发布制品；验证 Player.Sdk
    依赖及原生导出，以及使用新图形包生成的两个 SkiaDemo HAP。
-4. 安装一次性 .NET SDK，从本地源安装 dotnet tool，验证 init、workload 安装/卸载/恢复、
+4. 安装一次性 .NET SDK，从本地源安装 dotnet tool，验证 manifest 注册、workload 安装/卸载/恢复、
    x64 和 arm64 HAP。CI 不要求模拟器；设备运行由维护者额外验收。
 5. `prepare-release.ps1` 检查全部包的 ID、版本、仓库、内部依赖、manifest、runtime provenance；
    同时验证图形库两种 ABI 的 ELF、哈希、固定源码 revision、托管 API 版本及许可证文件。
@@ -97,18 +97,15 @@ pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
 
 ## 工具开发与旧版本迁移
 
-`tools/WorkloadInstaller` 是 `Chaldea.OpenHarmony.Workload` dotnet tool 的源码，命令名
-`harmonyos-workload`。工具内嵌共享 manifest 模板及 targets，通过程序集元数据记录版本和
-feature band；用户注册时无需再下载脚本或额外安装 PowerShell。应用打包仍使用 Windows
-内置 PowerShell 和官方 CLI。
+`tools/WorkloadInstaller` 是 `Chaldea.OpenHarmony.Workload` 工具的源码，命令名为 `ohos`。
+工具内嵌共享 manifest 模板及 targets，通过程序集元数据记录版本和 feature band。
 
 本地 pack 后，可使用独立 tool 目录测试，不影响用户全局工具：
 
 ```powershell
 dotnet tool install Chaldea.OpenHarmony.Workload --tool-path ./artifacts/local-tools `
   --add-source ./artifacts/packages --version 11.0.0-ohos.1-preview.1
-./artifacts/local-tools/harmonyos-workload init --dotnet-root ./artifacts/dotnet-sdk11
-dotnet workload install harmonyos --source ./artifacts/packages --skip-manifest-update
+./artifacts/local-tools/ohos workload install --dotnet-root ./artifacts/dotnet-sdk11 --source ./artifacts/packages
 ```
 
 上述 `dotnet` 必须来自同一个独立 SDK，应用验证脚本会显式设置正确 PATH。
@@ -116,12 +113,12 @@ dotnet workload install harmonyos --source ./artifacts/packages --skip-manifest-
 
 若安装过早期的 `openharmony.net.workload` manifest，先用原 SDK 执行
 `dotnet workload uninstall harmonyos`，再移除该 SDK 的
-`sdk-manifests/10.0.300/openharmony.net.workload/10.0.10` 旧注册目录，然后运行新工具 init。
+`sdk-manifests/10.0.300/openharmony.net.workload/10.0.10` 旧注册目录，然后运行 `ohos workload install`。
 新工具检测同名 workload 冲突时会停止，不会覆盖其它 manifest。
 
-同一 SDK feature band 的补丁更新使用 `dotnet workload update`。新版 manifest 和 packs
+同一 SDK feature band 的补丁更新使用 `ohos workload update`。新版 manifest 和 packs
 可从配置的 NuGet 源下载后，在已安装 workload 的独立 SDK 环境中执行该命令，再用
-`dotnet workload list` 核对版本。注册工具用于首次安装和移除 manifest 注册。
+`ohos workload list` 核对版本。
 
 从 .NET 10 升级时，使用独立的 .NET 11 SDK 注册新版 workload，并将应用目标框架改为
 `net11.0-ohos`。原 .NET 10 SDK 中的 workload 可以保留，两个 feature band 互不替代。

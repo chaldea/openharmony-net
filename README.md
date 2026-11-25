@@ -5,54 +5,62 @@
 
 ## 快速开始
 
-以下展示 `11.0.0` 正式版的 NuGet 安装流程。可用版本见
+以下命令适用于提供 `ohos` 入口的版本。可用版本见
 [NuGet 工具包页面](https://www.nuget.org/packages/Chaldea.OpenHarmony.Workload)。
 
 ### 1. 准备环境
 
-需要 Windows x64、**ZIP 解压安装的 .NET SDK 11.0.100**（feature band 11.0.100）、
-官方 HarmonyOS command-line-tools 及 SDK，以及 JDK 17+。
-MSI/Visual Studio 管理的 workload 安装不支持这里的第三方包，请使用独立 SDK。
-
-安装并配置好路径后，先在 PowerShell 中确认环境变量。将示例路径替换为实际安装位置：
-
-```powershell
-$env:DOTNET_ROOT = 'C:\dotnet11'
-$env:PATH = "$env:DOTNET_ROOT;$env:USERPROFILE\.dotnet\tools;$env:PATH"
-$env:OHOS_COMMAND_LINE_TOOLS = 'c:\command-line-tools'
-$env:JAVA_HOME = 'c:\Program Files\Huawei\DevEco Studio\jbr'
-
-dotnet --version
-Test-Path "$env:OHOS_COMMAND_LINE_TOOLS\sdk\default\openharmony\native\oh-uni-package.json"
-Test-Path "$env:JAVA_HOME\bin\java.exe"
-```
-
-版本应为 `11.0.1xx`，两个路径检查均为 `True`。SDK 下载入口：
-[.NET 11](https://dotnet.microsoft.com/download/dotnet/11.0)。
-这些赋值对当前 PowerShell 窗口有效；长期使用可配置为用户环境变量。
+支持 Windows x64、Linux x64 和 macOS x64/arm64。将可写的独立 .NET SDK 和官方 HarmonyOS
+command-line-tools 的 `bin` 目录加入 PATH。`dotnet --version` 应显示正式版 `11.0.1xx`，
+`hvigorw -v` 可用于确认 CLI。Windows 需要 ZIP 版 SDK，MSI 管理的 workload 安装器需要 MSI 格式的包。
+发布 HAP 和运行应用还需要 JDK 17+，可通过 `JAVA_HOME` 指定安装目录。
+[.NET 11 下载](https://dotnet.microsoft.com/download/dotnet/11.0)
 
 ### 2. 安装 workload
 
 ```powershell
-dotnet tool install -g Chaldea.OpenHarmony.Workload --version 11.0.0
-harmonyos-workload init
-dotnet workload install harmonyos --skip-manifest-update
-dotnet workload list
+dotnet tool install -g Chaldea.OpenHarmony.Workload
+ohos workload install
+ohos workload list
 ```
 
-`init` 将工具内置的 manifest 注册到当前 `dotnet` 所选 SDK，并启用 manifest 模式；
-随后由 `dotnet workload install` 从 NuGet 下载 SDK、模板和两个架构的运行时包。
-工具版本与这些依赖版本一致。注册不依赖 Harmony SDK，应用构建时才检查 SDK 是否齐全。
+`install` 注册内置 manifest，并调用 `dotnet workload install` 安装 SDK、模板和运行时包。
+使用本地或私有源时可运行 `ohos workload install --source <源>`，多个源可重复指定。
+工具遵循当前目录的 `global.json`。需要覆盖 PATH 时可设置 `DOTNET_ROOT`，或在单条命令中传入
+`--dotnet-root <目录>`。后续创建和构建应用时使用同一 SDK 的 `dotnet`。
 
-同一 SDK feature band 的补丁版发布到包源后，在原来的独立 SDK 环境中运行
-`dotnet workload update` 即可原地升级。用 `dotnet workload list` 确认 `harmonyos`
-的 manifest 版本。原地升级可以继续使用首次注册时安装的 `harmonyos-workload` 工具。
+### 模拟器
+
+安装与主机平台匹配的官方 Command Line Tools，把其 `bin` 目录加入 PATH。
+当 `Emulator -help` 列出 `-imageList`、`-install` 和 `-create` 时，可以直接下载镜像和创建首台设备。
+首次使用先运行 `Emulator -license` 阅读协议，同意后运行 `Emulator -license accept`。
+
+```powershell
+ohos emulator create
+ohos emulator run
+# 使用结束后
+ohos emulator stop
+```
+
+三个命令省略名称时都操作 `MyPhone`。`create` 默认选择 `phone`，优先使用 `HarmonyOS 6.1.0(23)`。
+如果当前主机的镜像列表没有这个版本，工具会从可用版本中优先选择正式版。
+镜像已安装时直接复用，缺少时自动下载，确认镜像文件就绪后创建设备。下载中断后可重试同一条命令。
+可用 `Emulator -imageList -deviceType phone` 查看可选镜像，将其中的 `deviceType` 和完整 `osVersion`
+传给 `--device-type` 和 `--os-version`。下载可用 `--http-proxy <URL>` 指定代理。
+
+命令行工具根目录默认读取 `OHOS_COMMAND_LINE_TOOLS`，否则使用用户目录下的
+`.Huawei/command-line-tools`，再从 PATH 中查找官方 CLI 的 `bin` 目录。
+三个命令都可传 `--command-line-tools <目录>` 覆盖。实例默认保存在 `~/.Huawei/Emulator/deployed`。
+`create` 和 `run` 优先查找 DevEco 的镜像目录，Windows 为 `%LOCALAPPDATA%\Huawei\Sdk`，
+macOS 为 `~/Library/Huawei/Sdk`，然后查找 `~/.Huawei/Sdk`。缺少所需镜像时，`create` 下载到 `~/.Huawei/Sdk`。
+`--instance-path <目录>` 可指定实例位置，`--image-root <目录>` 可单独指定镜像查找和下载位置。
+官方 SDK 位于 `<command-line-tools>/sdk`。
 
 ### 3. 创建和运行应用
 
 ```powershell
-dotnet new ohos -n HelloHarmony
-cd HelloHarmony
+dotnet new ohos -o MyApp
+cd MyApp
 dotnet build
 
 # 先启动 x86_64 模拟器，然后运行。
@@ -75,7 +83,7 @@ dotnet publish -p:OpenHarmonyAbi=arm64-v8a
 ```
 
 连接多个设备时，通过 `-p:OpenHarmonyDevice=<HDC目标>` 选择；可用
-`& "$env:OHOS_COMMAND_LINE_TOOLS\sdk\default\openharmony\toolchains\hdc.exe" list targets`
+`<CLI 根目录>/sdk/default/openharmony/toolchains/hdc list targets`
 查看目标。实际设备运行已验证 API17 / x86_64 模拟器，arm64 已验证交叉编译和 HAP。
 
 ## 应用配置
@@ -89,8 +97,8 @@ dotnet publish -p:OpenHarmonyAbi=arm64-v8a
 
 | 属性 | 用途 / 默认值 |
 | --- | --- |
-| `OpenHarmonyCommandLineTools` | 官方 CLI 根目录；默认 `OHOS_COMMAND_LINE_TOOLS` |
-| `OpenHarmonyJavaHome` | JDK 根目录；默认 `JAVA_HOME` |
+| `OpenHarmonyCommandLineTools` | 官方 CLI 根目录，依次使用属性、`OHOS_COMMAND_LINE_TOOLS` 和 PATH |
+| `OpenHarmonyJavaHome` | JDK 根目录，默认使用 `JAVA_HOME` |
 | `OpenHarmonyAbi` | `x86_64` 或 `arm64-v8a`；默认 x86_64 |
 | `OpenHarmonyDevice` | HDC 目标；只有一个连接时自动选择 |
 | `OpenHarmonyBundleName` | 应用包名；默认由项目名派生 |
@@ -132,8 +140,7 @@ jobs:
       - name: Install workload
         run: |
           dotnet tool install -g Chaldea.OpenHarmony.Workload
-          harmonyos-workload init
-          dotnet workload install harmonyos --skip-manifest-update
+          ohos workload install
       # Build and publish your app
       - name: Publish HAP
         run: >-
@@ -196,28 +203,14 @@ HarfBuzz 包时的 `libHarfBuzzSharp.so`）放入 HAP 的 `libs/<ABI>/`，无需
 
 ## 更新和卸载
 
-正常更新或卸载 workload 时，可以直接使用 dotnet 指令:
 ```powershell
-# 会更新列表中所有的workload
-dotnet workload update
-
-# 卸载当前workload
-dotnet workload uninstall harmonyos
+ohos workload update       # 更新当前 SDK 的所有已安装 workload，可传入 --source
+ohos workload uninstall    # 卸载 harmonyos，成功后移除其 manifest
+dotnet tool uninstall -g Chaldea.OpenHarmony.Workload
 ```
 
-更新`Chaldea.OpenHarmony.Workload`工具时，需要先使用原版本解除注册：
-```powershell
-dotnet workload uninstall harmonyos
-harmonyos-workload unregister
-dotnet tool update -g Chaldea.OpenHarmony.Workload
-harmonyos-workload init
-dotnet workload install harmonyos --skip-manifest-update
-```
-
-仅卸载 workload 后可用 `dotnet workload restore --skip-manifest-update` 根据项目恢复。
-完全移除时执行 workload uninstall、工具 unregister，再执行
-`dotnet tool uninstall -g Chaldea.OpenHarmony.Workload`。
-每个 SDK feature band 需要对应注册，工具遇到不支持的 band 会给出提示。
+单独管理 manifest 可用 `ohos workload register` 和 `ohos workload unregister`。
+例如，先注册，再用 `dotnet workload restore --skip-manifest-update` 按项目恢复 workload。
 
 ## 项目维护
 

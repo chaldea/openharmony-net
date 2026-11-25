@@ -6,18 +6,24 @@
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>harmonyos-workload</ToolCommandName>
+    <ToolCommandName>ohos</ToolCommandName>
     <PackageId>Chaldea.OpenHarmony.Workload</PackageId>
+    <!-- The regular global-tool apphost cannot find a standalone runtime on PATH. -->
+    <ToolCommandRunner>executable</ToolCommandRunner>
+    <ToolEntryPoint>ohos.sh</ToolEntryPoint>
     <Authors>Chaldea;OpenHarmony.NET contributors</Authors>
-    <Description>Registers the harmonyos workload for a standalone .NET SDK. No PowerShell script or source checkout required.</Description>
+    <Description>Installs and manages the OpenHarmony .NET workload using the .NET SDK selected on PATH.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="OpenHarmony.Workload.Tests" />
     <AssemblyMetadata Include="WorkloadVersion" Value="$(Version)" />
     <AssemblyMetadata Include="WorkloadFeatureBand" Value="$(WorkloadFeatureBand)" />
     <EmbeddedResource Include="../../src/OpenHarmony.NET.Workload/WorkloadManifest.json.in" LogicalName="WorkloadManifest.json.in" />
     <EmbeddedResource Include="../../src/OpenHarmony.NET.Workload/WorkloadManifest.targets" LogicalName="WorkloadManifest.targets" />
     <None Include="README.md" Pack="true" PackagePath="/" />
+    <None Update="launchers/ohos.sh" Pack="true" PackagePath="tools/net11.0/any/ohos.sh" />
+    <None Update="launchers/ohos.cmd;launchers/DotnetToolSettings.xml" Pack="true" PackagePath="tools/net11.0/win-x64/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
