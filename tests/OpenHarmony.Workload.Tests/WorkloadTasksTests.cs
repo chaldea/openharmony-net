@@ -50,11 +50,27 @@ public sealed class WorkloadTasksTests : IDisposable
     [Fact]
     public void MissingSdkReportsActionableError()
     {
-        var task = new ResolveSdk { BuildEngine = engine };
+        var task = new ResolveSdk { BuildEngine = engine, SearchPath = "" };
         Assert.False(task.Execute());
         var error = Assert.Single(engine.Errors);
         Assert.Equal("OHOS1001", error.Code);
         Assert.Contains("OHOS_COMMAND_LINE_TOOLS", error.Message);
+    }
+
+    [Fact]
+    public void PathDiscoverySkipsUnrelatedLaunchersAndSuppliesTheCliRootForPackaging()
+    {
+        string native = CreateSdk("official tools/sdk/default/openharmony", 26);
+        string sdk = Path.Combine(root, "official tools");
+        string bin = Directory.CreateDirectory(Path.Combine(sdk, "bin")).FullName;
+        string unrelated = Directory.CreateDirectory(Path.Combine(root, "other", "bin")).FullName;
+        string launcher = OperatingSystem.IsWindows() ? "hvigorw.bat" : "hvigorw";
+        File.WriteAllText(Path.Combine(bin, launcher), "");
+        File.WriteAllText(Path.Combine(unrelated, launcher), "");
+        var task = new ResolveSdk { BuildEngine = engine, SearchPath = string.Join(Path.PathSeparator, unrelated, bin) };
+        Assert.True(task.Execute());
+        Assert.Equal(native, task.NativeRoot);
+        Assert.Equal(sdk, task.CommandLineTools);
     }
 
     [Fact]

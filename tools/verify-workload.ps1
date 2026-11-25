@@ -28,20 +28,20 @@ New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
 $projectRoot = Join-Path $runRoot 'app'
 $project = Join-Path $projectRoot 'WorkloadSmoke.csproj'
 $oldEnvironment = @{}
-foreach ($name in @('PATH','DOTNET_ROOT','DOTNET_ROOT_X64','DOTNET_ROOT_ARM64','NUGET_PACKAGES','OHOS_COMMAND_LINE_TOOLS','OHOS_SDK_ROOT','JAVA_HOME','DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE','MSBUILDDISABLENODEREUSE')) {
+foreach ($name in @('PATH','DOTNET_ROOT','DOTNET_ROOT_X64','DOTNET_ROOT_ARM64','DOTNET_CLI_HOME','NUGET_PACKAGES','OHOS_COMMAND_LINE_TOOLS','OHOS_SDK_ROOT','JAVA_HOME','DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE')) {
     $oldEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 $installed = $false
 
 function Invoke-Dotnet {
-    param([string]$Name, [string[]]$Arguments, [string]$ExpectedFailure)
+    param([string]$Name, [string[]]$Arguments, [string]$ExpectedFailure, [string]$Executable = $dotnet)
     $log = Join-Path $runRoot "$Name.log"
     if ($ExpectedFailure) { Write-Host "Verify negative test '$Name' (command must fail with the expected diagnostic)." }
-    else { Write-Host "Verify: dotnet $($Arguments -join ' ')" }
+    else { Write-Host "Verify: $(Split-Path $Executable -Leaf) $($Arguments -join ' ')" }
     $previous = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        & $dotnet @Arguments *> $log
+        & $Executable @Arguments *> $log
         $code = $LASTEXITCODE
     }
     finally { $ErrorActionPreference = $previous }
@@ -94,18 +94,16 @@ function Assert-Hap {
 }
 
 try {
-    $env:PATH = @($DotnetRoot, $env:PATH) -join [IO.Path]::PathSeparator
-    $env:DOTNET_ROOT = $DotnetRoot
-    $env:DOTNET_ROOT_X64 = $DotnetRoot
-    $env:DOTNET_ROOT_ARM64 = $DotnetRoot
+    $env:PATH = @($DotnetRoot, (Join-Path $CommandLineTools 'bin'), $env:PATH) -join [IO.Path]::PathSeparator
+    $env:DOTNET_ROOT = $null
+    $env:DOTNET_ROOT_X64 = $null
+    $env:DOTNET_ROOT_ARM64 = $null
+    $env:DOTNET_CLI_HOME = Join-Path $runRoot 'cli-home'
     $env:NUGET_PACKAGES = Join-Path $runRoot 'nuget'
-    $env:OHOS_COMMAND_LINE_TOOLS = $CommandLineTools
+    $env:OHOS_COMMAND_LINE_TOOLS = $null
     $env:OHOS_SDK_ROOT = $null
     $env:JAVA_HOME = $JavaHome
     $env:DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE = 'true'
-    # Reused MSBuild nodes can retain the workload task DLL on Windows and
-    # prevent the install/uninstall lifecycle from removing the SDK pack.
-    $env:MSBUILDDISABLENODEREUSE = '1'
     # Stop repository-level MSBuild settings and package sources from leaking in.
     [IO.File]::WriteAllText((Join-Path $runRoot 'Directory.Build.props'), '<Project />')
     [IO.File]::WriteAllText((Join-Path $runRoot 'Directory.Build.targets'), '<Project />')
@@ -115,18 +113,14 @@ try {
     $toolPath = Join-Path $runRoot 'tools'
     Invoke-Dotnet 'tool-install' @('tool','install','Chaldea.OpenHarmony.Workload','--tool-path',$toolPath,
         '--version',$Version,'--source',$PackageSource,'--configfile',(Join-Path $runRoot 'NuGet.Config'))
-    & (Join-Path $toolPath "harmonyos-workload$executableExtension") --version > (Join-Path $runRoot 'tool-command.log')
-    if ($LASTEXITCODE -ne 0) { throw 'The installed dotnet tool command failed.' }
-    # Invoke the installed tool through its SDK host, so no system .NET runtime is needed.
-    $toolDll = Join-Path $toolPath ".store/chaldea.openharmony.workload/$Version/chaldea.openharmony.workload/$Version/tools/net11.0/any/WorkloadInstaller.dll"
-    Invoke-Dotnet 'tool-init' @($toolDll,'init','--dotnet-root',$DotnetRoot)
-    Invoke-Dotnet 'tool-init-repeat' @($toolDll,'init','--dotnet-root',$DotnetRoot)
-    Invoke-Dotnet 'install' @('workload','install','harmonyos','--source',$PackageSource,'--skip-manifest-update')
+    $ohos = Join-Path $toolPath $(if ($executableExtension) { 'ohos.cmd' } else { 'ohos' })
+    Invoke-Dotnet 'tool-command' @('--version') -Executable $ohos
+    Invoke-Dotnet 'install' @('workload','install','--source',$PackageSource) -Executable $ohos
     $installed = $true
-    Invoke-Dotnet 'list' @('workload','list')
+    Invoke-Dotnet 'list' @('workload','list') -Executable $ohos
     if ((Get-Content -Raw (Join-Path $runRoot 'list.log')) -notmatch '\bharmonyos\b') { throw 'harmonyos is absent from workload list.' }
     Invoke-Dotnet 'new' @('new','ohos','-n','WorkloadSmoke','-o',$projectRoot)
-    Invoke-Dotnet 'missing-sdk' @('build',$project,'-p:OpenHarmonyCommandLineTools=','-p:OpenHarmonySdkRoot=') 'OHOS1001.*Install the HarmonyOS SDK'
+    Invoke-Dotnet 'missing-sdk' @('build',$project,"-p:OpenHarmonySdkRoot=$runRoot/missing-sdk") 'OHOS1001.*missing-sdk'
     Invoke-Dotnet 'invalid-abi' @('build',$project,'-p:OpenHarmonyAbi=invalid') 'OpenHarmonyAbi must be'
     Invoke-Dotnet 'build' @('build',$project)
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -152,15 +146,18 @@ try {
         if (!$rendered) { throw 'The installed application did not render a Framework frame on .NET 11.' }
         $deviceResult = @{ target = $Device; runtimeMajor = 11; backend = 'OpenGL'; firstFrame = $true }
     }
-    Invoke-Dotnet 'uninstall' @('workload','uninstall','harmonyos')
+    Invoke-Dotnet 'uninstall' @('workload','uninstall') -Executable $ohos
     $installed = $false
     if ((Test-Path -LiteralPath $records) -contains $true) { throw 'Workload installation record remains after uninstall.' }
+    if (Test-Path (Join-Path $DotnetRoot "sdk-manifests/$featureBand/chaldea.openharmony.workload")) { throw 'Manifest remains after uninstall.' }
+    Invoke-Dotnet 'tool-register' @('workload','register','--dotnet-root',$DotnetRoot) -Executable $ohos
     Invoke-Dotnet 'missing-workload' @('build',$project,'--no-restore') 'NETSDK1147'
-    Invoke-Dotnet 'tool-unregister' @($toolDll,'unregister','--dotnet-root',$DotnetRoot)
-    Invoke-Dotnet 'tool-reregister' @($toolDll,'init','--dotnet-root',$DotnetRoot)
+    Invoke-Dotnet 'tool-unregister' @('workload','unregister') -Executable $ohos
+    Invoke-Dotnet 'tool-reregister' @('workload','register') -Executable $ohos
     Invoke-Dotnet 'workload-restore' @('workload','restore',$project,'--source',$PackageSource,'--skip-manifest-update')
     $installed = $true
     Invoke-Dotnet 'build-restored' @('build',$project)
+    Invoke-Dotnet 'update' @('workload','update','--source',$PackageSource) -Executable $ohos
     $result = @{ sdk = $sdkVersion; featureBand = $featureBand; version = $Version; packageSource = $PackageSource;
         x64 = $x64; arm64 = $arm64; device = $deviceResult; success = $true }
     $resultJson = $result | ConvertTo-Json -Depth 6
@@ -172,7 +169,7 @@ try {
 finally {
     try {
         if ($installed -and !$KeepInstalled -and (Test-Path -LiteralPath $records) -contains $true) {
-            Invoke-Dotnet 'cleanup-uninstall' @('workload','uninstall','harmonyos')
+            Invoke-Dotnet 'cleanup-uninstall' @('workload','uninstall') -Executable $ohos
         }
     }
     finally {

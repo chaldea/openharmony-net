@@ -8,7 +8,8 @@ namespace OpenHarmony.NET.Sdk;
 public sealed class ResolveSdk : Microsoft.Build.Utilities.Task
 {
     public string SdkRoot { get; set; } = "";
-    public string CommandLineTools { get; set; } = "";
+    [Output] public string CommandLineTools { get; set; } = "";
+    public string SearchPath { get; set; } = Environment.GetEnvironmentVariable("PATH") ?? "";
     public int ApiLevel { get; set; }
     [Output] public string NativeRoot { get; set; } = "";
     [Output] public string ManifestPath { get; set; } = "";
@@ -21,11 +22,13 @@ public sealed class ResolveSdk : Microsoft.Build.Utilities.Task
         try
         {
             // The official CLI layout groups components under sdk/default/openharmony.
+            if (string.IsNullOrWhiteSpace(CommandLineTools))
+                CommandLineTools = FindCommandLineTools(SearchPath);
             string root = SdkRoot;
             if (string.IsNullOrWhiteSpace(root))
             {
                 if (string.IsNullOrWhiteSpace(CommandLineTools))
-                    throw new InvalidOperationException("Install the HarmonyOS SDK and set OpenHarmonyCommandLineTools (or OHOS_COMMAND_LINE_TOOLS), or OpenHarmonySdkRoot (OHOS_SDK_ROOT).");
+                    throw new InvalidOperationException("Install the HarmonyOS SDK and add the command-line-tools bin directory to PATH, or set OpenHarmonyCommandLineTools (OHOS_COMMAND_LINE_TOOLS) or OpenHarmonySdkRoot (OHOS_SDK_ROOT).");
                 root = Path.Combine(CommandLineTools, "sdk", "default");
             }
             root = Path.GetFullPath(root);
@@ -55,6 +58,33 @@ public sealed class ResolveSdk : Microsoft.Build.Utilities.Task
             Log.LogError(null, "OHOS1001", null, null, 0, 0, 0, 0, ex.Message);
             return false;
         }
+    }
+
+    private static string FindCommandLineTools(string searchPath)
+    {
+        string extension = OperatingSystem.IsWindows() ? ".bat" : "";
+        foreach (string entry in searchPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            foreach (string name in new[] { "hvigorw", "ohpm" })
+            {
+                var launcher = new FileInfo(Path.Combine(entry.Trim('"'), name + extension));
+                if (!launcher.Exists) continue;
+                string? root = GetCliRoot(launcher);
+                if (root != null) return root;
+                if (launcher.ResolveLinkTarget(returnFinalTarget: true) is FileInfo target && GetCliRoot(target) is string linkedRoot)
+                    return linkedRoot;
+            }
+        }
+        return "";
+    }
+
+    private static string? GetCliRoot(FileInfo launcher)
+    {
+        var root = launcher.Directory?.Parent;
+        // In addition to bin, the vendor ships launchers under hvigor/bin and ohpm/bin.
+        if (root?.Name is "hvigor" or "ohpm") root = root.Parent;
+        return root != null && File.Exists(Path.Combine(root.FullName, "sdk/default/openharmony/native/oh-uni-package.json"))
+            ? root.FullName : null;
     }
 }
 

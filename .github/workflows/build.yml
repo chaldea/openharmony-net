@@ -91,7 +91,6 @@ jobs:
       # Isolate file-based workload installation from preinstalled SDKs and MSI.
       DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-sdk
       NUGET_PACKAGES: ${{ github.workspace }}/artifacts/ci-nuget
-      MSBUILDDISABLENODEREUSE: '1'
       WORKLOAD_VERSION: ${{ needs.build.outputs.version }}
       SDK_VERSION: ${{ needs.build.outputs.sdk-version }}
       HARMONYOS_CLI_VERSION: '6.1.1.280'
@@ -143,7 +142,7 @@ jobs:
           cli=$(dirname "$sdk")
           test -f "$sdk/default/openharmony/native/oh-uni-package.json"
           "$cli/bin/$hvigor" -v
-          echo "OHOS_COMMAND_LINE_TOOLS=$cli" >> "$GITHUB_ENV"
+          echo "$cli/bin" >> "$GITHUB_PATH"
       - name: Seed the default branch Windows HarmonyOS CLI cache
         if: >-
           runner.os == 'Windows' && steps.windows-ohos-cache.outputs.cache-hit != 'true' &&
@@ -169,12 +168,13 @@ jobs:
             </packageSourceMapping>
           </configuration>
           EOF
+          unset DOTNET_ROOT OHOS_COMMAND_LINE_TOOLS
           dotnet tool install Chaldea.OpenHarmony.Workload --tool-path ./workload-tool --version "$WORKLOAD_VERSION" --configfile NuGet.Config
-          tool="./workload-tool/harmonyos-workload"
-          if [[ -f "$tool.exe" ]]; then tool="$tool.exe"; fi
-          "$tool" init --dotnet-root "$DOTNET_INSTALL_DIR"
-          dotnet workload install harmonyos --source ./ci-packages --skip-manifest-update
+          tool="./workload-tool/ohos"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then tool="$tool.cmd"; fi
+          "$tool" workload install --source ./ci-packages
+          "$tool" workload list
           dotnet new ohos -n WorkloadSmoke -o workload-app
           dotnet publish workload-app/WorkloadSmoke.csproj -c Release -warnaserror:NU1603
           dotnet publish workload-app/WorkloadSmoke.csproj -c Release -warnaserror:NU1603 -p:OpenHarmonyAbi=arm64-v8a
-          dotnet workload uninstall harmonyos
+          "$tool" workload uninstall

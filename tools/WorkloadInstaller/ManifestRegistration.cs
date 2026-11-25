@@ -55,7 +55,7 @@ public sealed class ManifestRegistration(SdkInstallation sdk, string supportedFe
         if (IsInstalled)
             throw new InvalidOperationException("Uninstall harmonyos before changing its registration: dotnet workload uninstall harmonyos.");
         if (Directory.Exists(ManifestRoot) && Directory.EnumerateFileSystemEntries(ManifestRoot).Any())
-            throw new InvalidOperationException("A different registration exists. Run harmonyos-workload unregister before initializing this version.");
+            throw new InvalidOperationException("A different registration exists. Run ohos workload unregister before registering this version.");
         string manifests = Path.Combine(sdk.Root, "sdk-manifests");
         if (Directory.Exists(manifests))
         {
@@ -92,14 +92,14 @@ public sealed class ManifestRegistration(SdkInstallation sdk, string supportedFe
         if (Directory.Exists(ManifestRoot)) Directory.Delete(ManifestRoot, recursive: true);
     }
 
-    private void ValidateSdk()
+    internal void ValidateSdk()
     {
         if (sdk.FeatureBand != supportedFeatureBand)
             throw new InvalidOperationException($"This tool supports SDK feature band {supportedFeatureBand}; selected {sdk.FeatureBand}. Use a matching SDK or tool release.");
         if (!File.Exists(sdk.DotnetPath) || !Directory.Exists(Path.Combine(sdk.Root, "sdk", sdk.Version)))
             throw new InvalidOperationException("The selected standalone SDK is incomplete.");
         if (MetadataRoots.Any(root => File.Exists(Path.Combine(root, "installertype", "msi"))))
-            throw new InvalidOperationException("MSI-managed workload installations are unsupported. Extract the official .NET SDK Windows x64 ZIP and select it with --dotnet-root.");
+            throw new InvalidOperationException("MSI-managed workloads require MSI packs. Select a standalone .NET SDK from the Windows x64 ZIP using PATH, DOTNET_ROOT or --dotnet-root.");
         // Never follow a link when registering or recursively removing our own directory.
         for (string? path = ManifestRoot; path is not null; path = Path.GetDirectoryName(path))
         {

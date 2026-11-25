@@ -1,0 +1,5 @@
+<DotNetCliTool Version="2">
+  <Commands>
+    <Command Name="ohos" EntryPoint="ohos.cmd" Runner="executable" />
+  </Commands>
+</DotNetCliTool>

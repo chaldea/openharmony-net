@@ -7,6 +7,7 @@
        Workload installations are read-only during application builds. -->
   <Target Name="ResolveOpenHarmonySdk" DependsOnTargets="ValidateOpenHarmonyWorkload">
     <ResolveSdk SdkRoot="$(OpenHarmonySdkRoot)" CommandLineTools="$(OpenHarmonyCommandLineTools)" ApiLevel="$(OpenHarmonyApiLevel)">
+      <Output TaskParameter="CommandLineTools" PropertyName="OpenHarmonyCommandLineTools" />
       <Output TaskParameter="NativeRoot" PropertyName="OpenHarmonyNativeRoot" />
       <Output TaskParameter="ManifestPath" PropertyName="OpenHarmonySdkManifestPath" />
       <Output TaskParameter="ManifestSha256" PropertyName="OpenHarmonySdkManifestSha256" />
