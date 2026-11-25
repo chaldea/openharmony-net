@@ -16,6 +16,8 @@ public static class Program
             if (args.Length == 0 || args is ["workload"] || args.Any(arg => arg is "--help" or "-h" or "-?"))
             {
                 Console.WriteLine("""
+                    ohos emulator list [--instance-path <directory>]
+                    ohos emulator images [--device-type <type>] [--image-root <directory>] [--http-proxy <url>]
                     ohos emulator create [name] [--device-type <type>] [--os-version <version>] [options]
                     ohos emulator run [name] [--command-line-tools <directory>] [--instance-path <directory>] [--image-root <directory>]
                     ohos emulator stop [name] [--command-line-tools <directory>]

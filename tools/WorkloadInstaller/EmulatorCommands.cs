@@ -39,11 +39,35 @@ internal static class EmulatorCommands
         var options = ParseOptions(args[(hasName ? 2 : 1)..]);
         return action switch
         {
+            "list" when !hasName => ListInstances(options),
+            "images" when !hasName => ListImages(options),
             "create" => Create(name, options, Command(ResolveEmulator(options))),
             "run" => Run(name, options),
             "stop" => Stop(name, options),
             _ => throw new ArgumentException($"Unknown emulator command '{action}'. See ohos --help.")
         };
+    }
+
+    private static int ListInstances(Dictionary<string, string> options)
+    {
+        string root = GetOption(options, "--instance-path", DefaultInstancePath);
+        if (Directory.Exists(root))
+        {
+            foreach (string descriptor in Directory.EnumerateFiles(root, "*.ini").Order(StringComparer.Ordinal))
+                Console.WriteLine(Path.GetFileNameWithoutExtension(descriptor));
+        }
+        return 0;
+    }
+
+    private static int ListImages(Dictionary<string, string> options)
+    {
+        List<string> args = ["-imageList"];
+        foreach (var (option, flag) in new[] { ("--device-type", "-deviceType"), ("--image-root", "-imageRoot"), ("--http-proxy", "-http_proxy") })
+        {
+            if (options.TryGetValue(option, out string? value))
+                args.AddRange([flag, value]);
+        }
+        return Command(ResolveEmulator(options))(args.ToArray()).ExitCode;
     }
 
     private static Dictionary<string, string> ParseOptions(string[] args)
@@ -297,6 +321,8 @@ internal static class EmulatorCommands
     private static void PrintUsage()
     {
         Console.WriteLine("""
+            ohos emulator list [--instance-path <directory>]
+            ohos emulator images [--device-type <type>] [--image-root <directory>] [--http-proxy <url>]
             ohos emulator create [name] [--device-type <type>] [--os-version <version>] [--http-proxy <url>]
                 [--command-line-tools <directory>] [--instance-path <directory>] [--image-root <directory>]
             ohos emulator run [name] [--command-line-tools <directory>] [--instance-path <directory>] [--image-root <directory>]

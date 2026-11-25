@@ -9,6 +9,7 @@
     <TargetPlatformVersion Condition="'$(TargetPlatformVersion)' == '' or '$(TargetPlatformVersion)' == '0.0'">15.0</TargetPlatformVersion>
     <SupportedOSPlatformVersion Condition="'$(SupportedOSPlatformVersion)' == ''">15.0</SupportedOSPlatformVersion>
     <OpenHarmonyTarget>true</OpenHarmonyTarget>
+    <OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == '' and '$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX')) and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">arm64-v8a</OpenHarmonyAbi>
     <OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == '' and '$(RuntimeIdentifier)' == 'linux-musl-arm64'">arm64-v8a</OpenHarmonyAbi>
     <OpenHarmonyAbi Condition="'$(OpenHarmonyAbi)' == ''">x86_64</OpenHarmonyAbi>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(OpenHarmonyAbi)' == 'x86_64'">linux-musl-x64</RuntimeIdentifier>

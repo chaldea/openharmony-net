@@ -5,23 +5,32 @@
 
 ## 快速开始
 
-以下命令适用于提供 `ohos` 入口的版本。可用版本见
-[NuGet 工具包页面](https://www.nuget.org/packages/Chaldea.OpenHarmony.Workload)。
-
 ### 1. 准备环境
 
-支持 Windows x64、Linux x64 和 macOS x64/arm64。将可写的独立 .NET SDK 和官方 HarmonyOS
-command-line-tools 的 `bin` 目录加入 PATH。`dotnet --version` 应显示正式版 `11.0.1xx`，
-`hvigorw -v` 可用于确认 CLI。Windows 需要 ZIP 版 SDK，MSI 管理的 workload 安装器需要 MSI 格式的包。
-发布 HAP 和运行应用还需要 JDK 17+，可通过 `JAVA_HOME` 指定安装目录。
-[.NET 11 下载](https://dotnet.microsoft.com/download/dotnet/11.0)
+默认开发环境不需要安装DevEco软件，只需要安装最新的[Command Line Tools](https://developer.huawei.com/consumer/cn/download)就可以，然后将bin目录添加到全局的PATH中。
+
+当前Workload只支持最新的[.NET 11](https://dotnet.microsoft.com/download/dotnet/11.0)及后续版本。低版本的workload需要手动回退runtime分支并重新打包才行，目前无自动化流程。
+
+环境验证：
+```bash
+$ dotnet --version
+11.0.1xx
+
+$ hvigorw -v
+6.26.9
+
+$ java --version
+openjdk 21.0.12.1
+```
+正式开始前，请先确认上述命令都能正常输出。
+
 
 ### 2. 安装 workload
 
-```powershell
+```bash
 dotnet tool install -g Chaldea.OpenHarmony.Workload
-ohos workload install
-ohos workload list
+ohos workload install # 安装当前dotnet版本的workload
+ohos workload list    # 查看是否安装成功(如果安装成功会显示: harmonyos)
 ```
 
 `install` 注册内置 manifest，并调用 `dotnet workload install` 安装 SDK、模板和运行时包。
@@ -31,39 +40,32 @@ ohos workload list
 
 ### 模拟器
 
-安装与主机平台匹配的官方 Command Line Tools，把其 `bin` 目录加入 PATH。
-当 `Emulator -help` 列出 `-imageList`、`-install` 和 `-create` 时，可以直接下载镜像和创建首台设备。
-首次使用先运行 `Emulator -license` 阅读协议，同意后运行 `Emulator -license accept`。
+启动模拟器设备，默认`ohos`命令提供了简化模拟器操作的指令。
 
-```powershell
-ohos emulator create
-ohos emulator run
-# 使用结束后
-ohos emulator stop
+```bash
+ohos emulator create  # 创建模拟器
+ohos emulator run     # 运行模拟器实例
+ohos emulator stop    # 停止当前运行的模拟器实例
+ohos emulator list    # 显示所有实例
+ohos emulator images  # 查看所有可用镜像
 ```
 
-三个命令省略名称时都操作 `MyPhone`。`create` 默认选择 `phone`，优先使用 `HarmonyOS 6.1.0(23)`。
-如果当前主机的镜像列表没有这个版本，工具会从可用版本中优先选择正式版。
-镜像已安装时直接复用，缺少时自动下载，确认镜像文件就绪后创建设备。下载中断后可重试同一条命令。
-可用 `Emulator -imageList -deviceType phone` 查看可选镜像，将其中的 `deviceType` 和完整 `osVersion`
-传给 `--device-type` 和 `--os-version`。下载可用 `--http-proxy <URL>` 指定代理。
+`create`,`run`,`stop`三个命令省略名称时，会默认使用 `MyPhone` 作为默认名称。`create` 默认选择 `phone`，优先使用 `HarmonyOS 6.1.0(23)`。如果当前主机的镜像列表没有这个版本，工具会从可用版本中优先选择正式版。
 
-命令行工具根目录默认读取 `OHOS_COMMAND_LINE_TOOLS`，否则使用用户目录下的
-`.Huawei/command-line-tools`，再从 PATH 中查找官方 CLI 的 `bin` 目录。
 三个命令都可传 `--command-line-tools <目录>` 覆盖。实例默认保存在 `~/.Huawei/Emulator/deployed`。
 `create` 和 `run` 优先查找 DevEco 的镜像目录，Windows 为 `%LOCALAPPDATA%\Huawei\Sdk`，
-macOS 为 `~/Library/Huawei/Sdk`，然后查找 `~/.Huawei/Sdk`。缺少所需镜像时，`create` 下载到 `~/.Huawei/Sdk`。
-`--instance-path <目录>` 可指定实例位置，`--image-root <目录>` 可单独指定镜像查找和下载位置。
-官方 SDK 位于 `<command-line-tools>/sdk`。
+macOS 为 `~/Library/Huawei/Sdk`，然后查找 `~/.Huawei/Sdk`。
+
+当上述目录中缺少所需镜像时，`create` 指令会自动下载镜像到 `~/.Huawei/Sdk`。`--instance-path <目录>` 可指定实例位置，`--image-root <目录>` 可单独指定镜像查找和下载位置。
 
 ### 3. 创建和运行应用
 
-```powershell
+```bash
 dotnet new ohos -o MyApp
 cd MyApp
 dotnet build
 
-# 先启动 x86_64 模拟器，然后运行。
+# 需要先启动模拟器
 dotnet run
 
 # 生成发布用的未签名 HAP。
@@ -135,7 +137,8 @@ jobs:
       - uses: ErBWs/setup-ohos@v2
         with:
           version: '6.1.1.280'
-          cache: true
+          # 镜像很大启用后会占用github的cache容量，按需启用
+          cache: false
       # Install workload
       - name: Install workload
         run: |
@@ -144,7 +147,7 @@ jobs:
       # Build and publish your app
       - name: Publish HAP
         run: >-
-          dotnet publish xxxx
+          dotnet publish
 ```
 
 `setup-java` 提供 `JAVA_HOME`；`setup-ohos` 安装官方 CLI 和 SDK。`dotnet publish` 会自动执行NativeAOT编译并调用 Hvigor 打包，无需连接设备或启动模拟器。
@@ -203,10 +206,10 @@ HarfBuzz 包时的 `libHarfBuzzSharp.so`）放入 HAP 的 `libs/<ABI>/`，无需
 
 ## 更新和卸载
 
-```powershell
+```bash
 ohos workload update       # 更新当前 SDK 的所有已安装 workload，可传入 --source
 ohos workload uninstall    # 卸载 harmonyos，成功后移除其 manifest
-dotnet tool uninstall -g Chaldea.OpenHarmony.Workload
+dotnet tool uninstall -g Chaldea.OpenHarmony.Workload # 卸载工具
 ```
 
 单独管理 manifest 可用 `ohos workload register` 和 `ohos workload unregister`。
