@@ -9,7 +9,7 @@ public sealed class EmulatorCommandsTests : IDisposable
 
     public void Dispose() => temp.Delete(recursive: true);
 
-    private const string DefaultVersion = "HarmonyOS 6.1.0(23)";
+    private const string DefaultVersion = "HarmonyOS 7.0.0(26.0.0)";
     private const string ImagePath = "system-image/HarmonyOS-6.0.31/phone_all_x86";
     private string Images => Path.Combine(temp.FullName, "image root");
     private string Devices => Path.Combine(temp.FullName, "instance root");
@@ -31,7 +31,7 @@ public sealed class EmulatorCommandsTests : IDisposable
 
     [Theory]
     [InlineData(DefaultVersion, false)]
-    [InlineData("HarmonyOS 7.0.0(26.0.0)", true)]
+    [InlineData("HarmonyOS 6.1.0(23)", true)]
     public void DownloadsAnAvailableImageBeforeCreatingTheDevice(string version, bool interrupted)
     {
         string image = Path.Combine(Images, ImagePath);
@@ -60,7 +60,7 @@ public sealed class EmulatorCommandsTests : IDisposable
                     WriteImage(staging);
                     return (0, "");
                 case "-create":
-                    Assert.Equal(["-create", "MyPhone", "-deviceType", "phone", "-osVersion", version, "-instancePath", Devices, "-imageRoot", Images], args);
+                    Assert.Equal(["-create", "MyPhone", "-deviceType", "phone", "-osVersion", version, "-instancePath", Devices, "-imageRoot", Images, .. (version == DefaultVersion ? new[] { "-screenProfile", "Pura 90 Pro" } : Array.Empty<string>())], args);
                     Assert.True(File.Exists(Path.Combine(image, "system.img")));
                     WriteDevice();
                     return (0, "");
@@ -109,7 +109,7 @@ public sealed class EmulatorCommandsTests : IDisposable
         WriteImage(Images);
         Assert.Equal(0, EmulatorCommands.Create("MyPhone", Options, (args, capture) =>
         {
-            Assert.Equal(["-create", "MyPhone", "-deviceType", "phone", "-osVersion", DefaultVersion, "-instancePath", Devices, "-imageRoot", Images], args);
+            Assert.Equal(["-create", "MyPhone", "-deviceType", "phone", "-osVersion", DefaultVersion, "-instancePath", Devices, "-imageRoot", Images, "-screenProfile", "Pura 90 Pro"], args);
             WriteDevice();
             return (0, "");
         }));
@@ -128,6 +128,6 @@ public sealed class EmulatorCommandsTests : IDisposable
     [InlineData("--bad")]
     public void CommandsRejectInvalidDeviceNames(string name)
     {
-        Assert.Equal(1, Program.Main(["emulator", "create", name, "--device-type", "phone", "--os-version", "HarmonyOS 6.1.0(23)"]));
+        Assert.Equal(1, Program.Main(["emulator", "create", name, "--device-type", "phone", "--os-version", "HarmonyOS 7.0.0(26.0.0)"]));
     }
 }

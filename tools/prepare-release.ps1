@@ -63,7 +63,7 @@ foreach ($id in $catalog.packages) {
         if ($id -like '*.NativeAssets.HarmonyOS') {
             $library = if ($id -eq 'Chaldea.SkiaSharp.NativeAssets.HarmonyOS') { 'libSkiaSharp.so' } else { 'libHarfBuzzSharp.so' }
             $managedId = if ($library -eq 'libSkiaSharp.so') { 'SkiaSharp' } else { 'HarfBuzzSharp' }
-            $managedVersion = if ($managedId -eq 'SkiaSharp') { '4.157.0' } else { '14.4.0.200' }
+            $managedVersion = if ($managedId -eq 'SkiaSharp') { '4.158.0' } else { '15.0.0' }
             $dependency = @($metadata.SelectNodes('.//*[local-name()="dependency"]') | Where-Object id -EQ $managedId)
             if (!$dependency.Count -or @($dependency | Where-Object version -NE "[$managedVersion]").Count) {
                 throw "Native ABI must pin $managedId to $managedVersion in $id"
@@ -76,9 +76,9 @@ foreach ($id in $catalog.packages) {
                 if (!$entry) { throw "$id lacks $library for $abi" }
                 $manifest = (Read-ZipText $zip "native/$abi/manifest.json") | ConvertFrom-Json
                 if ($manifest.schemaVersion -ne 1 -or $manifest.abi -ne $abi -or $manifest.apiLevel -ne 15 -or
-                    $manifest.skiaSharpVersion -ne '4.157.0' -or $manifest.harfBuzzSharpVersion -ne '14.4.0.200' -or
-                    $manifest.skiaSharpCommit -ne '2a53a3c8641073bc914c63ee158bbf62b8a0bb92' -or
-                    $manifest.skiaCommit -ne '51cb594d773b5383a45065ea3c8cbec398ad2c36' -or
+                    $manifest.skiaSharpVersion -ne '4.158.0' -or $manifest.harfBuzzSharpVersion -ne '15.0.0' -or
+                    $manifest.skiaSharpCommit -ne 'c332e46b6d5e127cc78a03807bd96300c3b6344e' -or
+                    $manifest.skiaCommit -ne 'b4574ecb9b4292951c64ddce5619628fdaf0451d' -or
                     $manifest.sdkManifestSha256 -notmatch '^[0-9a-f]{64}$') { throw "Invalid graphics provenance in $id/$abi" }
                 $record = @($manifest.files | Where-Object name -EQ $library)
                 if ($record.Count -ne 1) { throw "Missing graphics hash in $id/$abi" }

@@ -17,8 +17,8 @@ import tarfile
 ROOT = Path(__file__).resolve().parents[2]
 UPSTREAM = ROOT / 'dotnet/SkiaSharp'
 OUT = ROOT / 'artifacts/native/skia'
-SKIASHARP_COMMIT = '2a53a3c8641073bc914c63ee158bbf62b8a0bb92'
-SKIA_COMMIT = '51cb594d773b5383a45065ea3c8cbec398ad2c36'
+SKIASHARP_COMMIT = 'c332e46b6d5e127cc78a03807bd96300c3b6344e'
+SKIA_COMMIT = 'b4574ecb9b4292951c64ddce5619628fdaf0451d'
 SOURCE = OUT / ('source-' + SKIA_COMMIT[:12])
 DEPENDENCIES = ('expat', 'freetype', 'harfbuzz', 'libjpeg-turbo', 'libpng',
                 'libwebp', 'zlib')
@@ -166,7 +166,7 @@ def build(sdk, arch, ninja, jobs, dependencies):
         shutil.copy2(library, destination / name)
         files.append(dict(name=name, sha256=sha256(library), needed=needed))
     manifest = dict(schemaVersion=1, abi=abi, targetTriple=triple, apiLevel=15,
-                    skiaSharpVersion='4.157.0', harfBuzzSharpVersion='14.4.0.200',
+                    skiaSharpVersion='4.158.0', harfBuzzSharpVersion='15.0.0',
                     skiaSharpCommit=SKIASHARP_COMMIT, skiaCommit=SKIA_COMMIT,
                     sdk=json.loads((sdk / 'oh-uni-package.json').read_text()),
                     sdkManifestSha256=sha256(sdk / 'oh-uni-package.json'),

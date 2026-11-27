@@ -7,7 +7,7 @@ internal static class EmulatorCommands
 {
     internal delegate (int ExitCode, string Output) InvokeEmulator(string[] arguments, bool captureOutput = false);
     private const string DefaultName = "MyPhone";
-    private const string DefaultVersion = "HarmonyOS 6.1.0(23)";
+    private const string DefaultVersion = "HarmonyOS 7.0.0(26.0.0)";
     private static string UserHome => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private static string HuaweiRoot => Path.Combine(UserHome, ".Huawei");
     private static string DefaultCommandLineTools => Path.Combine(HuaweiRoot, "command-line-tools");
@@ -44,6 +44,8 @@ internal static class EmulatorCommands
             "create" => Create(name, options, Command(ResolveEmulator(options))),
             "run" => Run(name, options),
             "stop" => Stop(name, options),
+            "delete" when hasName => Delete(name, options),
+            "delete" => throw new ArgumentException("Usage: ohos emulator delete <name>"),
             _ => throw new ArgumentException($"Unknown emulator command '{action}'. See ohos --help.")
         };
     }
@@ -106,8 +108,10 @@ internal static class EmulatorCommands
         string[] proxy = options.TryGetValue("--http-proxy", out string? url) ? ["-http_proxy", url] : [];
         string osVersion = requestedVersion ?? DefaultVersion;
         bool Created() => File.Exists(descriptor) && File.Exists(Path.Combine(device, "config.ini"));
+        string[] Profile() => deviceType.Equals("phone", StringComparison.OrdinalIgnoreCase) && osVersion == DefaultVersion
+            ? ["-screenProfile", "Pura 90 Pro"] : [];
         string[] CreateArguments(string imageRoot) => ["-create", name, "-deviceType", deviceType, "-osVersion", osVersion,
-            "-instancePath", instancePath, "-imageRoot", imageRoot];
+            "-instancePath", instancePath, "-imageRoot", imageRoot, .. Profile()];
         bool TryCreateCached(string imageRoot)
         {
             if (!InstalledImages(imageRoot).Any()) return false;
@@ -255,6 +259,13 @@ internal static class EmulatorCommands
         return 0;
     }
 
+    private static int Delete(string name, Dictionary<string, string> options)
+    {
+        RejectOptions(options, "--device-type", "--os-version", "--image-root", "--http-proxy");
+        string path = GetOption(options, "--instance-path", DefaultInstancePath);
+        return Command(ResolveEmulator(options))(["-delete", name, "-instancePath", path]).ExitCode;
+    }
+
     private static int Stop(string name, Dictionary<string, string> options)
     {
         RejectOptions(options, "--device-type", "--os-version", "--instance-path", "--image-root", "--http-proxy");
@@ -296,6 +307,11 @@ internal static class EmulatorCommands
     {
         var start = new ProcessStartInfo(executable) { UseShellExecute = false, RedirectStandardOutput = captureOutput, RedirectStandardError = captureOutput };
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
+        if (OperatingSystem.IsMacOS() && start.ArgumentList.Count > 0 && start.ArgumentList[0] is "-install" or "-imageList")
+        {
+            start.Environment["LANG"] = "zh_CN.UTF-8";
+            start.Environment["LC_ALL"] = "zh_CN.UTF-8";
+        }
         return Process.Start(start) ?? throw new InvalidOperationException($"Cannot start {executable}.");
     }
 
@@ -326,12 +342,13 @@ internal static class EmulatorCommands
             ohos emulator create [name] [--device-type <type>] [--os-version <version>] [--http-proxy <url>]
                 [--command-line-tools <directory>] [--instance-path <directory>] [--image-root <directory>]
             ohos emulator run [name] [--command-line-tools <directory>] [--instance-path <directory>] [--image-root <directory>]
+            ohos emulator delete <name> [--command-line-tools <directory>] [--instance-path <directory>]
             ohos emulator stop [name] [--command-line-tools <directory>]
 
             The default device name is MyPhone. Instances are stored in ~/.Huawei/Emulator/deployed.
             Create and run look for images in %LOCALAPPDATA%\Huawei\Sdk (Windows) or ~/Library/Huawei/Sdk (macOS) first.
             Missing images are downloaded to ~/.Huawei/Sdk. Use --image-root to select a different image directory.
-            Create prefers the phone image "HarmonyOS 6.1.0(23)" and uses an available release if the host catalog omits it.
+            Create prefers the phone image "HarmonyOS 7.0.0(26.0.0)" and uses an available release if the host catalog omits it.
             List image versions with Emulator -imageList -deviceType phone.
             """);
     }

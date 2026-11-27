@@ -20,6 +20,7 @@ public static class Program
                     ohos emulator images [--device-type <type>] [--image-root <directory>] [--http-proxy <url>]
                     ohos emulator create [name] [--device-type <type>] [--os-version <version>] [options]
                     ohos emulator run [name] [--command-line-tools <directory>] [--instance-path <directory>] [--image-root <directory>]
+                    ohos emulator delete <name> [--command-line-tools <directory>] [--instance-path <directory>]
                     ohos emulator stop [name] [--command-line-tools <directory>]
                     ohos workload register [--dotnet-root <directory>]
                     ohos workload unregister [--dotnet-root <directory>]

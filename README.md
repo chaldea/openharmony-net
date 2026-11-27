@@ -43,14 +43,15 @@ ohos workload list    # 查看是否安装成功(如果安装成功会显示: ha
 启动模拟器设备，默认`ohos`命令提供了简化模拟器操作的指令。
 
 ```bash
-ohos emulator create  # 创建模拟器
-ohos emulator run     # 运行模拟器实例
-ohos emulator stop    # 停止当前运行的模拟器实例
+ohos emulator create  # 创建模拟器(默认MyPhone)
+ohos emulator run     # 运行模拟器实例(默认MyPhone)
+ohos emulator stop    # 停止当前运行的模拟器实例(默认MyPhone)
+ohos emulator delete  # 删除指定实例(默认MyPhone)
 ohos emulator list    # 显示所有实例
 ohos emulator images  # 查看所有可用镜像
 ```
 
-`create`,`run`,`stop`三个命令省略名称时，会默认使用 `MyPhone` 作为默认名称。`create` 默认选择 `phone`，优先使用 `HarmonyOS 6.1.0(23)`。如果当前主机的镜像列表没有这个版本，工具会从可用版本中优先选择正式版。
+`create`,`run`,`stop`三个命令省略名称时，会默认使用 `MyPhone` 作为默认名称。`create` 默认选择 `phone`，当前默认机型为 `Pura 90 Pro`，优先使用 `HarmonyOS 7.0.0(26.0.0)`。如果当前主机的镜像列表没有这个版本，工具会从可用版本中优先选择正式版。
 
 三个命令都可传 `--command-line-tools <目录>` 覆盖。实例默认保存在 `~/.Huawei/Emulator/deployed`。
 `create` 和 `run` 优先查找 DevEco 的镜像目录，Windows 为 `%LOCALAPPDATA%\Huawei\Sdk`，

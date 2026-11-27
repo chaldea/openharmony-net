@@ -39,6 +39,7 @@ ohos emulator create [name] [--device-type <type>] [--os-version <version>] [--h
     [--command-line-tools <directory>] [--instance-path <directory>] [--image-root <directory>]
 ohos emulator run [name] [--command-line-tools <directory>] [--instance-path <directory>] [--image-root <directory>]
 ohos emulator stop [name] [--command-line-tools <directory>]
+ohos emulator delete MyPhone
 ```
 
 Run `ohos emulator create` once, then `ohos emulator run` to start the device.
@@ -46,7 +47,7 @@ All three commands default to the device name `MyPhone`.
 `create` reuses an installed image. On a cache miss, it downloads into a temporary directory
 and checks for the SDK package manifest and system image before creating the device.
 You can rerun the same command after an interrupted download.
-The default device type is `phone`. It prefers `HarmonyOS 6.1.0(23)` when available
+The default device type is `phone`. It uses the `Pura 90 Pro` profile with `HarmonyOS 7.0.0(26.0.0)` when available
 and otherwise uses a release from the host's image catalog. To choose another image, pass
 its `deviceType` and exact `osVersion` from the catalog on your host.
 

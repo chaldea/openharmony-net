@@ -1,7 +1,7 @@
 # HarmonyOS graphics native assets
 
-`Chaldea.SkiaSharp.NativeAssets.HarmonyOS` provides SkiaSharp **4.157.0**;
-`Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS` provides HarfBuzzSharp **14.4.0.200**.
+`Chaldea.SkiaSharp.NativeAssets.HarmonyOS` provides SkiaSharp **4.158.0**;
+`Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS` provides HarfBuzzSharp **15.0.0**.
 The package release version follows the OpenHarmony.NET release, independently
 of those upstream managed API versions. Exact managed dependencies prevent an
 incompatible managed library from silently loading this native ABI.
