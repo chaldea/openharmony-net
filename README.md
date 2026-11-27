@@ -161,49 +161,73 @@ jobs:
 ```powershell
 dotnet new ohos -n SkiaApp
 cd SkiaApp
-dotnet add package Chaldea.SkiaSharp.NativeAssets.HarmonyOS --version 11.0.0
-dotnet add package Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS --version 11.0.0
+dotnet add package Chaldea.SkiaSharp.NativeAssets.HarmonyOS
+dotnet add package Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS
 ```
 所建项目为`<TargetFramework>net11.0-ohos</TargetFramework>`的项目，在该项目上直接添加对应的包引用即可。
 普通 `net11.0`、桌面或 MAUI 项目，需要添加一个 HarmonyOS 应用宿主，可先创建 `ohos` 项目，再引用的业务项目。
 
-此 CPU 绘制示例使用 `App.Run()` 桥接。先将项目文件中的
-`<OpenHarmonySurface>` 设为 `false`，再用下面的代码替换 `App.cs`。
+保留模板的 `<OpenHarmonySurface>true</OpenHarmonySurface>`，将 `App.cs` 替换为以下代码。Framework 的 XComponent 宿主通过 EGL 创建 OpenGL ES 2 上下文。Skia 使用当前上下文绘制到窗口的默认帧缓冲区，宿主在帧回调返回 `true` 后调用 `eglSwapBuffers` 显示画面。
 
 ```csharp
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using OpenHarmony.Hosting;
+using OpenHarmony.Views;
 using SkiaSharp;
 
-public static class App
+public static class Exports
 {
-    public static int Run()
+    [UnmanagedCallersOnly(EntryPoint = "openharmony_initialize", CallConvs = [typeof(CallConvCdecl)])]
+    public static nint Initialize() => SurfaceApplication.Initialize(() => new SkiaView());
+}
+
+sealed class SkiaView : SurfaceView
+{
+    private GRContext context = null!;
+    private (int Width, int Height) drawnSize;
+
+    public override void OnCreated()
     {
-        using var bitmap = new SKBitmap(64, 64);
-        using var canvas = new SKCanvas(bitmap);
-        canvas.Clear(SKColors.White);
-        using var paint = new SKPaint { Color = SKColors.CornflowerBlue };
-        canvas.DrawCircle(32, 32, 16, paint);
-        return bitmap.GetPixel(32, 32) == SKColors.CornflowerBlue ? 1 : 0;
+        using var gl = GRGlInterface.CreateGles(ResolveGl)
+            ?? throw new InvalidOperationException("Cannot load the GLES interface.");
+        context = GRContext.CreateGl(gl) ?? throw new InvalidOperationException("Cannot initialize Skia GLES.");
     }
+
+    private nint ResolveGl(string name)
+    {
+        // Skia also probes optional extension functions.
+        try { return GraphicsContext.GetProcAddress(name); }
+        catch (NotSupportedException) { return 0; }
+    }
+
+    public override bool OnFrame(SurfaceFrame frame)
+    {
+        if (frame.Width <= 0 || frame.Height <= 0 || drawnSize == (frame.Width, frame.Height))
+            return false;
+
+        // The EGL window surface exposes framebuffer 0 with RGBA8 and an 8-bit stencil.
+        using var target = new GRBackendRenderTarget(frame.Width, frame.Height, 0, 8,
+            new GRGlFramebufferInfo(0, 0x8058)); // GL_RGBA8
+        using var surface = SKSurface.Create(context, target, GRSurfaceOrigin.BottomLeft, SKColorType.Rgba8888)
+            ?? throw new InvalidOperationException("Cannot wrap the window framebuffer.");
+        var canvas = surface.Canvas;
+        float scale = Math.Min(frame.Width / 640f, frame.Height / 800f);
+        canvas.Translate((frame.Width - 640 * scale) / 2, (frame.Height - 800 * scale) / 2);
+        canvas.Scale(scale);
+        canvas.Clear(SKColors.White);
+        using var paint = new SKPaint { Color = SKColors.CornflowerBlue, IsAntialias = true };
+        canvas.DrawCircle(320, 400, 160, paint);
+        context.Flush();
+        drawnSize = (frame.Width, frame.Height);
+        return true;
+    }
+
+    public override void OnDestroyed() => context?.Dispose();
 }
 ```
 
-```powershell
-# x86_64 模拟器上的 Stage 页面显示返回值 1，表示像素检查通过。
-dotnet run
-
-# 发布 arm64 真机用 HAP。
-dotnet publish -p:OpenHarmonyAbi=arm64-v8a
-```
-
-`OpenHarmonyAbi` 自动选择对应的原生库，发布时会将 `libSkiaSharp.so`（以及引用了
-HarfBuzz 包时的 `libHarfBuzzSharp.so`）放入 HAP 的 `libs/<ABI>/`，无需手工配置复制。
-支持 API15+ 的 x86_64 和 arm64-v8a。
-
-**添加包提供绘图 API，不会自动创建 Skia 页面或 UI 控件。** 上面的代码只在内存中
-绘图，模板页面显示的是返回值。要在 ArkUI 中显示图像，还需将像素缓冲区通过 N-API
-传给 ArkTS，并创建 PixelMap 等显示对象。完整实现见
-[SkiaDemo](examples/SkiaDemo/README.md)：该示例使用 Player.Sdk 和自定义 Stage 页面，
-包含文字整形、像素传递和显示代码，可作为接入参考。
+运行 `dotnet run` 可在设备上查看圆形。包含渐变、路径和 HarfBuzz 文字整形的完整示例见 [SkiaDemo](examples/SkiaDemo/README.md)。
 
 ## 更新和卸载
 
