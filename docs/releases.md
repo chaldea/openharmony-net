@@ -91,7 +91,7 @@ pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
 ./tools/prepare-release.ps1 -Version 11.0.0-ohos.1-preview.1 -OutputDirectory ./artifacts/release-check
 ```
 
-图形包随本仓库发行线编号，但分别精确依赖 SkiaSharp 4.157.0、HarfBuzzSharp 14.4.0.200。
+图形包随本仓库发行线编号，但分别精确依赖 SkiaSharp 4.158.0、HarfBuzzSharp 15.0.0。
 升级上游时须同步原生源码、托管依赖和 provenance 校验，重新执行模拟器渲染验收。
 图形库是可选 NuGet 扩展，不加入 workload 的四个必需 pack。
 

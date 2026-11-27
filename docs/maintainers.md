@@ -12,7 +12,7 @@ dotnet/                    第三方源码（Git submodule）
   core-origin/
   runtime/                 OpenHarmony runtime 移植
   runtime-origin/          上游比较基线
-  SkiaSharp/               SkiaSharp 4.157.0（包含固定提交的 Skia C API 源码）
+  SkiaSharp/               SkiaSharp 4.158.0（包含固定提交的 Skia C API 源码）
 src/
   OpenHarmony.NDK.Bindings/
   OpenHarmony.NET.HapTooling/

@@ -41,7 +41,7 @@ pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
 <PackageReference Include="Chaldea.HarfBuzzSharp.NativeAssets.HarmonyOS" Version="11.0.0-ohos.1-preview.1" />
 ```
 
-包传递引用 SkiaSharp 4.157.0 / HarfBuzzSharp 14.4.0.200。不要混入 Android/Linux NativeAssets。
+包传递引用 SkiaSharp 4.158.0 / HarfBuzzSharp 15.0.0。不要混入 Android/Linux NativeAssets。
 `OpenHarmonyAbi` 决定复制哪个原生库；HAP 构建脚本收集发布目录中的 `.so`。
 本示例使用 Player.Sdk 和定制 Stage 页面，以便直接展示像素缓冲区。
 

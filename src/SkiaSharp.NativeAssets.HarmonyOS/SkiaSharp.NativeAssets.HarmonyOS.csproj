@@ -3,10 +3,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Chaldea.SkiaSharp.NativeAssets.HarmonyOS</PackageId>
     <NativeAssetName>libSkiaSharp.so</NativeAssetName>
-    <Description>HarmonyOS API15+ x86_64 and arm64 native assets for SkiaSharp 4.157.0.</Description>
+    <Description>HarmonyOS API15+ x86_64 and arm64 native assets for SkiaSharp 4.158.0.</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="SkiaSharp" Version="[4.157.0]" />
+    <PackageReference Include="SkiaSharp" Version="[4.158.0]" />
   </ItemGroup>
   <Import Project="../HarmonyOS.NativeAssets/NativeAssets.pack.targets" />
 </Project>
