@@ -4,9 +4,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OpenHarmonySurface>true</OpenHarmonySurface>
+    <OpenHarmonyBundleName>org.openharmony.dotnet.skia</OpenHarmonyBundleName>
     <AssemblyName>openharmony_skia</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
+  <ItemGroup Condition="'$(OpenHarmonyTarget)' != 'true'">
+    <ProjectReference Include="../../src/OpenHarmony.Framework/OpenHarmony.Framework.csproj" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="4.158.0" />
     <PackageReference Include="HarfBuzzSharp" Version="15.0.0" />

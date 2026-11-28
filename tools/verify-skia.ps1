@@ -23,6 +23,7 @@ $hapTaskAssembly = Join-Path $RepoRoot 'src/OpenHarmony.Framework.Tasks/bin/Rele
 
 function Invoke-HapRun {
     param([string]$HapPath, [string]$PublishDirectory, [string]$Abi, [string]$AssemblyName, [string]$BundleName, [string]$WorkDirectory)
+    New-Item -ItemType Directory -Force -Path $WorkDirectory | Out-Null
     $project = Join-Path $WorkDirectory 'run-hap.proj'
     $xml = @"
 <Project>
@@ -48,38 +49,20 @@ try {
         $publish = Join-Path $output "$arch/publish"
         Invoke-Checked dotnet @('publish',"$sample/SkiaDemo.csproj",'-c','Release','-o',$publish,
             '-p:OpenHarmonyTarget=true',"-p:OpenHarmonyAbi=$abi",'-p:OpenHarmonyApiLevel=15',
+            "-p:OpenHarmonyCommandLineTools=$CommandLineTools","-p:OpenHarmonyJavaHome=$JavaHome",
             "-p:OpenHarmonySdkRoot=$SdkRoot","-p:OpenHarmonyPackageVersion=$Version",
             "-p:RestoreAdditionalProjectSources=$RepoRoot/artifacts/packages","-p:RestorePackagesPath=$cache")
-        $stage = Join-Path $output "$arch/Stage"
-        Copy-Item -LiteralPath "$sample/Stage" -Destination $stage -Recurse
-        $profile = Join-Path $stage 'entry/build-profile.json5'
-        [IO.File]::WriteAllText($profile, [IO.File]::ReadAllText($profile).Replace('"x86_64"', "`"$abi`""))
-        $libs = Join-Path $stage "entry/libs/$abi"
-        New-Item -ItemType Directory -Force -Path $libs | Out-Null
-        Get-ChildItem -LiteralPath $publish -File | Where-Object Name -Match '\.so(\.|$)' |
-            Copy-Item -Destination $libs
         foreach ($name in @('libSkiaSharp.so', 'libHarfBuzzSharp.so')) {
             $built = Join-Path $RepoRoot "artifacts/native/skia/$abi/$name"
-            if ((Get-FileHash "$libs/$name").Hash -ne (Get-FileHash $built).Hash) {
+            if ((Get-FileHash "$publish/$name").Hash -ne (Get-FileHash $built).Hash) {
                 throw "Restored $name does not match the newly built HarmonyOS library."
             }
         }
-        $env:JAVA_HOME = $JavaHome
-        $env:DEVECO_SDK_HOME = Join-Path $CommandLineTools 'sdk'
-        $env:PATH = "$(Join-Path $CommandLineTools 'tool/node');$(Join-Path $JavaHome 'bin');$oldPath"
-        Push-Location $stage
-        try {
-            Invoke-Checked (Join-Path $CommandLineTools 'bin/ohpm.bat') @('install')
-            Invoke-Checked (Join-Path $CommandLineTools 'bin/hvigorw.bat') @('--mode','module','-p','product=default',
-                '-p','module=entry@default','-p','buildMode=debug','assembleHap','--no-daemon')
-        }
-        finally { Pop-Location }
-        $hap = Join-Path $output "$arch/SkiaDemo-unsigned.hap"
-        Copy-Item "$stage/entry/build/default/outputs/default/entry-default-unsigned.hap" $hap
+        $hap = Join-Path $publish "openharmony_skia-unsigned.hap"
         $zip = [IO.Compression.ZipFile]::OpenRead($hap)
         try {
             $libraries = @($zip.Entries | Where-Object FullName -Match '^libs/.*\.so(\.|$)')
-            foreach ($name in @('libSkiaSharp.so', 'libHarfBuzzSharp.so', 'openharmony_skia.so')) {
+            foreach ($name in @('libSkiaSharp.so', 'libHarfBuzzSharp.so', 'openharmony_skia.so', 'libopenharmony_framework.so')) {
                 if (!$zip.GetEntry("libs/$abi/$name")) { throw "HAP lacks $name for $abi" }
             }
             foreach ($library in $libraries) {
@@ -100,23 +83,23 @@ try {
             $settingsPath = Join-Path $output 'run-settings.json'
             @{
                 CommandLineTools=$CommandLineTools; JavaHome=$JavaHome; Abi=$abi; Device=$Device;
-                BundleName=$bundle; AssemblyName='SkiaDemo'; HapPath=$hap; PublishDirectory=$publish;
+                BundleName=$bundle; AssemblyName='openharmony_skia'; HapPath=$hap; PublishDirectory=$publish;
                 WorkDirectory=(Join-Path $output 'device'); DevelopmentSigning='true'; SignedHapPath=''
             } | ConvertTo-Json | Set-Content -Encoding UTF8 $settingsPath
-            Invoke-HapRun $hap $publish $abi 'SkiaDemo' $bundle (Join-Path $output 'device')
+            Invoke-HapRun $hap $publish $abi 'openharmony_skia' $bundle (Join-Path $output 'device')
             $hdc = Join-Path $CommandLineTools 'sdk/default/openharmony/toolchains/hdc.exe'
             $deadline = (Get-Date).AddSeconds(60)
             do {
                 $samplePid = (& $hdc -t $Device shell pidof $bundle | Out-String).Trim()
                 $log = @()
-                if ($samplePid -match '^\d+$') { $log = & $hdc -t $Device shell hilog -x -T SkiaDemo -P $samplePid }
+                if ($samplePid -match '^\d+$') { $log = & $hdc -t $Device shell hilog -x -T OpenHarmony -P $samplePid }
                 $text = $log -join "`n"
-                if ($text -match 'SKIA_DEMO rendered=1 pixels=640x800 glyphs=([1-9][0-9]*)') { break }
-                if ($text -match 'SKIA_DEMO failed') { break }
+                if ($text -match 'SKIA_DEMO rendered=1 pixels=[1-9][0-9]*x[1-9][0-9]* glyphs=([1-9][0-9]*)') { break }
+                if ($text -match 'OH_FRAMEWORK_ERROR') { break }
                 Start-Sleep -Seconds 2
             } while ((Get-Date) -lt $deadline)
             $log | Set-Content -Encoding UTF8 (Join-Path $output 'hilog.log')
-            if ($text -notmatch 'SKIA_DEMO rendered=1 pixels=640x800 glyphs=([1-9][0-9]*)') {
+            if ($text -notmatch 'SKIA_DEMO rendered=1 pixels=[1-9][0-9]*x[1-9][0-9]* glyphs=([1-9][0-9]*)') {
                 throw "Skia rendering was not confirmed by this app process. Evidence: $output"
             }
             $result.glyphs = [int]$Matches[1]

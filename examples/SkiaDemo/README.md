@@ -1,10 +1,7 @@
 # SkiaSharp + HarfBuzzSharp on HarmonyOS
 
 此示例从两个 `Chaldea.*.NativeAssets.HarmonyOS` NuGet 包加载真实 HarmonyOS 原生库。
-ArkTS 经 N-API 调用 C# NativeAOT，在 640×800 RGBA 缓冲区中绘制渐变、圆、贝塞尔路径
-和文字。HarfBuzz 使用系统字体整形 `Hello, HarmonyOS!`，Skia 根据生成的 glyph ID
-及位置绘制，再由 ArkUI PixelMap 显示。N-API 检查背景和几何图形的实际像素，页面
-显示完成后输出 `SKIA_DEMO rendered=1 pixels=640x800 glyphs=17`。
+Framework 的 XComponent 宿主通过 EGL 创建 OpenGL ES 2 上下文。SkiaView 将窗口帧缓冲区包装为 SKSurface，按窗口尺寸缩放渐变、路径和文字。HarfBuzz 使用系统字体整形 `Hello, HarmonyOS!`，Skia 根据字形编号和位置绘制。
 
 ## 构建、运行
 
@@ -43,7 +40,4 @@ pwsh ./tools/build-skia.ps1 -SdkRoot ./artifacts/native/sdk
 
 包传递引用 SkiaSharp 4.158.0 / HarfBuzzSharp 15.0.0。不要混入 Android/Linux NativeAssets。
 `OpenHarmonyAbi` 决定复制哪个原生库；HAP 构建脚本收集发布目录中的 `.so`。
-本示例使用 Player.Sdk 和定制 Stage 页面，以便直接展示像素缓冲区。
-
-原生库支持 EGL/OpenGL ES，但此示例仅验收 CPU 栅格渲染；arm64 仅验收构建及 HAP。
 示例使用设备自带的 `/system/fonts/HarmonyOS_Sans.ttf`，没有重新分发系统字体。
